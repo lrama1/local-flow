@@ -213,6 +213,27 @@ class Timeline(IdMixin, TimestampMixin, table=True):
     tracks_json: dict[str, Any] = Field(default_factory=dict, sa_type=JSON)
 
 
+class Voice(IdMixin, TimestampMixin, table=True):
+    """TTS voices (Section 12.2). Built-ins are synced from the installed TTS adapters; custom voices are a
+    built-in base voice plus adapter params (e.g. a Kokoro blend). Global, like the Cast library."""
+
+    __tablename__ = "voices"
+    __table_args__ = (UniqueConstraint("adapter_key", "kind", "native_id"),)
+
+    kind: str = Field(index=True)  # builtin | custom
+    adapter_key: str = Field(index=True)
+    native_id: str | None = None  # builtin: the adapter's voice name (e.g. "af_heart"); custom: None
+    base_voice_id: str | None = None  # custom: the builtin `voices.id` it starts from
+    name: str
+    description: str = ""
+    language: str = ""  # BCP-47-ish, e.g. "en-US"
+    gender: str = ""  # female | male | ""
+    params_json: dict[str, Any] = Field(default_factory=dict, sa_type=JSON)
+    meta_json: dict[str, Any] = Field(default_factory=dict, sa_type=JSON)  # builtin: quality grade, traits
+    preview_path: str | None = None  # relative to the data dir: library/voices/<id>/preview.wav
+    preview_text: str | None = None
+
+
 class LlmUsage(IdMixin, table=True):
     __tablename__ = "llm_usage"
 

@@ -1,10 +1,12 @@
-import { ImageIcon, SearchIcon, UserPlusIcon, UsersRoundIcon } from "lucide-react";
+import { AudioLinesIcon, ImageIcon, SearchIcon, UserPlusIcon, UsersRoundIcon } from "lucide-react";
 import { useState } from "react";
 import { mediaUrl, primaryImage, useLibrary, type LibraryCharacter } from "@/api/characters";
 import { EmptyState } from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Badge, Card, Input, Skeleton } from "@/components/ui/primitives";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CharacterWizard } from "@/features/characters/CharacterWizard";
+import { VoicesPanel } from "@/features/voices/VoicesPanel";
 import { LibraryCharacterDialog } from "./LibraryCharacterDialog";
 
 function LibraryCard({ c, onOpen }: { c: LibraryCharacter; onOpen: () => void }) {
@@ -36,6 +38,38 @@ function LibraryCard({ c, onOpen }: { c: LibraryCharacter; onOpen: () => void })
 }
 
 export function CastLibraryPage() {
+  const [tab, setTab] = useState("characters");
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="characters">
+            <UsersRoundIcon />
+            Characters
+          </TabsTrigger>
+          <TabsTrigger value="voices">
+            <AudioLinesIcon />
+            Voices
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="characters">
+          <CharactersPanel />
+        </TabsContent>
+        <TabsContent value="voices" className="space-y-4">
+          <div>
+            <h1 className="text-xl font-semibold">Voices</h1>
+            <p className="text-muted-foreground text-sm">
+              Text-to-speech voices for your characters&apos; dialogue, shared across projects.
+            </p>
+          </div>
+          <VoicesPanel />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function CharactersPanel() {
   const [q, setQ] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -43,7 +77,7 @@ export function CastLibraryPage() {
   const open = data.find((c) => c.id === openId);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">Cast library</h1>

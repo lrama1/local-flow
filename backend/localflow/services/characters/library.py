@@ -29,6 +29,7 @@ from localflow.services.board import unique_key
 from localflow.services.characters import store
 from localflow.services.characters.templates import square_thumb
 from localflow.services.events import EventBus
+from localflow.services.voice_store import check_voice
 
 _FIELDS = (
     "name",
@@ -119,7 +120,10 @@ class LibraryService:
             for k, v in body.model_dump(exclude_unset=True).items():
                 if k == "voice_hints":
                     row.voice_hints_json = dict(v or {})
-                elif k == "voice_id" or v is not None:
+                elif k == "voice_id":
+                    check_voice(s, v)
+                    row.voice_id = v
+                elif v is not None:
                     setattr(row, k, v)
             row.updated_at = utcnow()
             s.add(row)

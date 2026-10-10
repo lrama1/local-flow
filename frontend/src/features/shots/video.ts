@@ -11,6 +11,17 @@ export function shotVideoJobs(jobs: Job[] | undefined, shotId: string) {
   return { active, failed };
 }
 
+/** The shot's queued/running dialogue or SFX jobs, and the newest one if it failed. */
+export function shotAudioJobs(jobs: Job[] | undefined, shotId: string, slot: "dialogue" | "sfx") {
+  const mine = (jobs ?? [])
+    .filter((j) => j.target_ref?.["shot_id"] === shotId && j.target_ref?.["slot"] === slot)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return {
+    active: mine.filter((j) => j.status === "queued" || j.status === "running"),
+    failed: mine[0]?.status === "failed" ? mine[0] : undefined,
+  };
+}
+
 /** Extensions needed for the shot's duration with this plan's clip length (the backend caps at 4). */
 export function segmentsFor(shot: Shot, plan: VideoPlan | undefined): number {
   if (!plan || shot.duration_s <= plan.duration_s + 0.05) return 0;

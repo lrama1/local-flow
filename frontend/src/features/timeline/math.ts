@@ -248,10 +248,16 @@ export function clipLabel(
   return assetLabel(media?.get(clip.asset_id));
 }
 
+const AUDIO_KIND_LABELS: Record<string, string> = { tts: "Speech", v2a: "Sound effects", music: "Music" };
+
 export function assetLabel(asset: Asset | undefined): string {
   const gen = (asset?.generation ?? {}) as Record<string, unknown>;
   const params = (gen.params ?? {}) as Record<string, unknown>;
-  return String(gen.uploaded_name ?? params.text ?? params.prompt ?? "Audio");
+  const lines = params.lines as { text?: string }[] | undefined;
+  if (lines?.length) return `Dialogue: ${lines.map((l) => l.text ?? "").join(" / ")}`;
+  const text = [gen.uploaded_name, params.text, params.prompt].find((v) => typeof v === "string" && v.trim());
+  if (text) return String(text);
+  return AUDIO_KIND_LABELS[String(gen.job_type)] ?? "Audio";
 }
 
 /** Mirrors the export's fit: within 3% of the frame's aspect ratio it's cropped to fill, else padded. */

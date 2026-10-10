@@ -17,6 +17,8 @@ export interface KindConfig {
   duration?: boolean;
   numImages?: boolean;
   withAudio?: boolean;
+  /** Text-to-speech: pick a voice. */
+  voice?: boolean;
   assets?: AssetInput[];
 }
 
@@ -86,7 +88,7 @@ export const KINDS: Record<GenerateKind, KindConfig> = {
     duration: true,
     assets: [{ field: "video_asset_id", label: "Video to extend", type: "video" }],
   },
-  tts: { label: "Speech", output: "audio", promptField: "text", promptRequired: true },
+  tts: { label: "Speech", output: "audio", promptField: "text", promptRequired: true, voice: true },
   v2a: {
     label: "Video → audio",
     output: "audio",
@@ -127,6 +129,8 @@ export interface PlaygroundForm {
   adapterKey: string;
   /** Model registry entry (image and video kinds); empty = the server's default model. */
   modelId: string;
+  /** Text-to-speech voice (a LocalFlow voice id); empty = the model's default voice. */
+  voiceId: string;
   loras: { id: string; weight: number }[];
   extra: Record<string, unknown>;
   assets: Record<string, string[]>;
@@ -143,6 +147,7 @@ export const DEFAULT_FORM: PlaygroundForm = {
   seed: "",
   adapterKey: "",
   modelId: "",
+  voiceId: "",
   loras: [],
   extra: {},
   assets: {},
@@ -174,8 +179,9 @@ export function buildBody(
     if (!Number.isInteger(seed) || seed < 0) return { error: "Seed must be a non-negative integer" };
     body.seed = seed;
   }
+  if (cfg.voice && form.voiceId) body.voice_id = form.voiceId; // the server picks the voice's model
   if (cfg.output !== "audio" && form.modelId) body.model_entry_id = form.modelId;
-  else if (form.adapterKey) body.adapter_key = form.adapterKey;
+  else if (form.adapterKey && !(cfg.voice && form.voiceId)) body.adapter_key = form.adapterKey;
   if (cfg.output === "image" && form.loras.length) {
     body.loras = form.loras.map((l) => ({ model_entry_id: l.id, weight: l.weight }));
   }

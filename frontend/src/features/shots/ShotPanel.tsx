@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge, Input, Label, NativeSelect } from "@/components/ui/primitives";
 import { ingredientOptions } from "@/features/characters/mentionOptions";
 import { cn } from "@/lib/utils";
+import { AudioSection } from "./AudioSection";
 import { CAMERA_MOVES, MODES, SHOT_TYPES } from "./constants";
 import { KeyframeSection } from "./KeyframeSection";
 import type { KeyframeRun, KeyframeWhich } from "./references";
@@ -416,6 +417,14 @@ export function ShotPanel({
             <Input id="sh-music" value={draft.music_cue} onChange={(e) => set("music_cue", e.target.value)} />
           </div>
         </div>
+        <AudioSection
+          shot={shot}
+          projectId={projectId}
+          beforeGenerate={
+            dirty ? () => m.updateShot.mutateAsync({ id: shot.id, body: saveBody() }) : undefined
+          }
+        />
+
         <div className="space-y-1">
           <Label htmlFor="sh-cont">Continuity notes</Label>
           <Input

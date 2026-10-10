@@ -8,6 +8,7 @@ import { AssetGrid } from "@/components/AssetGrid";
 import { EmptyState } from "@/components/EmptyState";
 import { MediaPlayer, AssetThumb } from "@/components/MediaPreview";
 import { ModelPicker } from "@/components/ModelPicker";
+import { VoicePicker } from "@/components/VoicePicker";
 import { SchemaForm } from "@/components/SchemaForm";
 import { Button } from "@/components/ui/button";
 import {
@@ -292,6 +293,18 @@ export function PlaygroundPage() {
                 value={form.modelId || null}
                 onChange={(id) => update({ modelId: id ?? "", loras: [], extra: {} })}
                 className="w-full"
+              />
+            </div>
+          )}
+
+          {cfg.voice && (
+            <div className="space-y-1.5">
+              <Label htmlFor="pg-voice">Voice</Label>
+              <VoicePicker
+                id="pg-voice"
+                value={form.voiceId || null}
+                onChange={(id) => update({ voiceId: id ?? "" })}
+                noneLabel="Default voice"
               />
             </div>
           )}

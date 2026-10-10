@@ -12,7 +12,7 @@ from sqlmodel import col, func, select
 from localflow.config import Settings
 from localflow.db import Database
 from localflow.errors import AppError, bad_request, conflict, not_found
-from localflow.models import Ingredient, Project, Scene, Shot, Story, utcnow
+from localflow.models import Ingredient, Project, Scene, Shot, Story, Voice, utcnow
 from localflow.schemas.story import (
     BibleBody,
     Breakdown,
@@ -43,6 +43,7 @@ from localflow.services.story.rules import (
     breakdown_errors,
     breakdown_warnings,
 )
+from localflow.services.voice_store import voices_by_id
 
 log = logging.getLogger("localflow.story")
 
@@ -208,13 +209,15 @@ class StoryService:
             if missing:
                 raise bad_request("unknown_cast", f"Unknown character key(s): {', '.join(missing)}")
             chars = [by_key[k] for k in keys]
+        with self.db.session() as s:
+            voices = voices_by_id(s, {i.voice_id for i in chars if i.voice_id})
         return [
             CastMember(
                 key=i.key,
                 name=i.name,
                 visual_prompt=i.visual_prompt,
                 character_info=i.character_info,
-                voice=_voice(i),
+                voice=_voice(i, voices.get(i.voice_id or "")),
             )
             for i in chars
         ]
@@ -694,13 +697,17 @@ def _hints(voice: dict[str, str] | None) -> dict[str, str]:
     return {k: v for k, v in (voice or {}).items() if v}
 
 
-def _voice(ing: Ingredient) -> dict[str, str] | None:
-    """Cast-block voice (Section 8.5). Until voices exist (M6) it's described from the voice hints."""
+def _voice(ing: Ingredient, voice: Voice | None = None) -> dict[str, str] | None:
+    """Cast-block voice (Section 8.5): the assigned voice's name and description, else the voice hints."""
     hints = _hints(ing.voice_hints_json)
-    if not hints and not ing.voice_id:
+    if voice is not None:
+        traits = voice.description or str((voice.meta_json or {}).get("traits") or "")
+        parts = [p for p in (voice.gender, traits) if p]
+        return {"name": voice.name, "description": ", ".join(parts) or ", ".join(hints.values())}
+    if not hints:
         return None
     description = ", ".join(hints[k] for k in ("gender", "age", "tone") if k in hints)
-    return {"name": ing.voice_id or "", "description": description}
+    return {"name": "", "description": description}
 
 
 def _usage_dict(res: StructuredResult[Any]) -> dict[str, Any]:

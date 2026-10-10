@@ -536,6 +536,112 @@ Verified with six real Wan takes (1280×704 and 832×480 at 24 fps), exported th
      playing video stalls it, which then looks like more drift.
    - HTML volume caps at 1, so boosts above 0 dB are heard only in the export.
 
+## M6 — Audio
+
+Verified on the RTX 5080 with Kokoro-82M, MMAudio large 44.1 kHz v2, MusicGen small and a real LLM
+(project "Audio check (M6)"), and with FakeEngine tests for every endpoint.
+
+1. **Dependencies** (`pyproject.toml`, `gpu` group):
+   - `kokoro` with its English G2P (`misaki[en]`: spaCy plus a bundled espeak-ng). spaCy's
+     `en_core_web_sm` is pinned as a URL dependency, because misaki otherwise pip-installs it at run time,
+     which fails in a uv venv.
+   - `mmaudio` is a git dependency pinned to a commit. Its own requirements cover training and its Gradio
+     demo (gradio, tensorboard, hydra, opencv, av, torchcodec, …). `[tool.uv] override-dependencies` drops
+     them with never-true markers and relaxes its `numpy<2.1` pin, so numpy stays at 2.5.3 (numba 0.68 is
+     fine with it). `python-dotenv` stays, since pydantic-settings needs it.
+   - `torchvision` comes from the cu130 index. torchaudio isn't used: cu130 wheels stop at 2.11, and
+     nothing on the inference paths imports it.
+2. **Voices** (`voices` table, `services/voices.py`):
+   - Built-ins come from each TTS adapter's `AdapterInfo.voices`. They're upserted by (adapter, native id),
+     so their ids stay stable, for every adapter the worker can run with an installed model (the FakeEngine
+     needs none). Sync is lazy: the first list after the adapter set changes. Voices of an adapter that
+     went away stay, marked unavailable, because characters may use them.
+   - A custom voice is a built-in base voice plus `VoiceParams`: up to two other voices blended in, a base
+     weight, and a pace (0.7–1.4). Blend voices must share the base voice's language family; English
+     accents mix.
+   - Characters and Cast library entries store a `voices.id`, validated on write. Deleting a custom voice
+     unassigns it everywhere. The TTS request carries the native voice and params (`resolve_tts` also
+     accepts LocalFlow ids on `POST /generate/tts`).
+   - Previews are cached as `library/voices/<id>/preview.wav`, keyed by their text. Changing a voice's
+     sound drops the cache. `GET …/preview.wav` accepts `?token=` for `<audio>`. Auditioning unsaved
+     settings is a plain TTS job; the UI plays its asset.
+3. **Kokoro** (`worker/adapters/kokoro.py`):
+   - Loaded from the catalog files: `KModel(config=, model=)`, one `KPipeline` per language sharing it, and
+     style packs read from `voices/*.pt`. Nothing downloads at run time.
+   - A blend is a weighted average of style packs, which is what Kokoro's own `"a,b"` voice mixing does.
+   - Grades come from the model card; the short trait descriptions are ours (used for suggestions and
+     design). Japanese and Mandarin are left out, since they need extra G2P packages. That leaves 41 voices
+     in 7 languages.
+   - Kokoro pads every utterance with about 0.3 s of silence before and 0.5 s after, so lines are trimmed
+     to a 30/80 ms pad and the layout sets the timing. Its output peaks at only 0.28–0.42, so lines are
+     raised to -1 dBFS (at most 4×).
+   - The first job takes about 12 s (load plus spaCy); later ones about 2 s.
+4. **Voice design** (`POST /voices/design`, LLM purpose `voice_design`): Kokoro can't follow a text
+   description, so the LLM picks a blend and pace from the base voice and same-language voices, given
+   their grades and traits. Unknown voice ids are dropped with a warning. A real run (gpt-5.4-mini, 2–3 s)
+   turned "a weathered old fisherman; gravelly, slow and kind" into George 0.8 + Lewis 0.12 + Fable 0.08
+   at 0.86×.
+5. **Dialogue is one TTS job per shot** (`SpeechAdapter.synthesize`, `lines` mode), producing one WAV as
+   long as the clip:
+   - Each line uses its speaker's voice and params. Lines follow each other after a 0.3 s lead-in and
+     0.35 s gaps.
+   - If they don't fit, the lead-in and gaps shrink (to 0.1/0.15 s) first, then the pace goes up, to at
+     most 1.15× (`fit: "speed"`).
+   - Anything still too long is kept rather than cut. The WAV runs past the clip, and
+     `generation.output.overflow_s` drives a "+0.8 s" warning. Line placements are kept there too.
+   - The plan (`POST /shots/{id}/audio-plan`) estimates 2.6 words/s at the pace it'll use, including a
+     custom voice's own pace. Measured: about 2.5 words/s for George.
+   - Kokoro has no emotion control, so an emotion only nudges the pace (e.g. excited 1.08×, sad 0.92×).
+   - A speaker without a voice, or whose voice's model isn't installed, gets a suggestion from their
+     voice hints, avoiding voices other characters already use; the narrator gets a calm one. The plan
+     says so.
+   - Voices from two TTS models in one shot is a 409.
+6. **Selection and the timeline:**
+   - A finished dialogue or SFX take becomes the shot's selected audio for its part. The part comes from
+     the job's target slot, else its type, and `select-audio` switches between takes.
+   - If the timeline already holds the shot's take, the shot's clip on the Dialogue or SFX track is
+     swapped in place, aligned with the take and trimmed like it. So new audio needs no re-assemble, which
+     would drop edits.
+   - Auto-assemble (M5) places selected audio as before.
+7. **MMAudio** (`worker/adapters/mmaudio.py`):
+   - It uses MMAudio's model classes but not `eval_utils`, which imports the dropped training packages.
+     `generate` follows MMAudio's own.
+   - Frames come from our ffmpeg, matching MMAudio's transforms: 8 fps squashed to 384² for CLIP, and 25
+     fps with the short side at 224 and a center crop for Synchformer.
+   - MMAudio fetches CLIP and BigVGAN from the Hub by name. The catalog entry now includes both as parts
+     (10.7 GB in all), and they're pointed at the local folders while the model loads: open_clip's
+     `local-dir:`, and BigVGAN's `_from_pretrained` on the folder.
+   - bf16: 4.75 GB allocated, about 27 s to load, then 25 steps in about 3 s for a 5 s take.
+   - Whole 8 fps CLIP frames bound what it sees (5.04 s gives 40 frames, 5.0 s), so the output is padded
+     to the take's exact length with a 20 ms fade.
+   - It's trained on 8 s clips. Up to 10 s is one pass; longer takes use roughly 8 s windows starting on
+     whole seconds (where the two frame grids meet), overlapping by at least 1 s. Each overlap gets a 1 s
+     equal-power crossfade at its middle; averaging two independent generations would sound phasey.
+     Verified on 15.08 s: 3 windows, exact length, 39 s, and smooth levels at both crossfades.
+   - The default SFX negative prompt is "speech, talking, voice, music", minus words the prompt itself
+     uses.
+8. **Music** (`POST /projects/{id}/generate-music`):
+   - MusicGen small runs through transformers in fp32, at 32 kHz mono.
+   - The prompt is the scene's or film's music cues (plus the style notes), unless one is given. The
+     length is the timeline's, else the shots' takes.
+   - Adapters declare `max_duration_s`: MusicGen makes up to 30 s, and the response notes the cap. A 12 s
+     piece took 15 s.
+   - The result is placed on the Music track at the film's or scene's start.
+   - ACE-Step still has no adapter.
+9. **Acceptance** (`m6_accept.py` against the real server):
+   - A 5.04 s shot with one line plus an SFX prompt, and a 10.04 s shot with two speakers, each produced a
+     dialogue and an SFX WAV matching their clip within 0.4 ms.
+   - Auto-assemble, music, then export gave AAC 48 kHz stereo, 15.08 s long, with the dialogue window
+     5.5 dB above the SFX-only stretch after it.
+   - The designed "Old Tom" voice was auditioned, assigned, and used: the TTS request carried bm_george
+     plus its blend.
+10. **Limits:**
+    - No lip-sync, and no native audio (Wan 5B has none).
+    - The ModelCache holds one model, so dialogue followed by SFX reloads MMAudio (about 27 s) after
+      Kokoro.
+    - Kokoro and MMAudio need `allow_pickle_weights = true`. Their weights are loaded with
+      `torch.load(weights_only=True)`.
+
 ## In-app tutorials
 
 1. **Static files, no API:** videos, captions, posters and `index.json` live in

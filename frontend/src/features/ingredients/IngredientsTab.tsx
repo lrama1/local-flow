@@ -41,11 +41,13 @@ import {
 } from "@/components/ui/dialog";
 import { MentionTextarea } from "@/components/MentionTextarea";
 import { Badge, Card, Input, Label, NativeSelect, Skeleton, Textarea } from "@/components/ui/primitives";
+import { VoicePicker } from "@/components/VoicePicker";
 import { CharacterWizard } from "@/features/characters/CharacterWizard";
 import { ImportCharacterDialog } from "@/features/characters/ImportCharacterDialog";
 import { useProjectMentionOptions } from "@/features/characters/mentionOptions";
 import { ViewsEditor } from "@/features/characters/ViewsEditor";
 import { gateLicense } from "@/features/models/gateLicense";
+import { VoiceDesigner } from "@/features/voices/VoiceDesigner";
 import { cn } from "@/lib/utils";
 import { useUi } from "@/stores/ui";
 
@@ -180,6 +182,8 @@ const LIBRARY_BADGE = {
 /** Views strip, Cast library link and template actions for a character card (Section 11.7). */
 function CharacterExtras({ ing, projectId }: { ing: Ingredient; projectId: string }) {
   const [viewsOpen, setViewsOpen] = useState(false);
+  const [designing, setDesigning] = useState(false);
+  const { update } = useIngredientMutations(projectId);
   const lib = useLibraryMutations(projectId);
   const templates = useTemplateMutations();
   const toast = useUi((s) => s.pushToast);
@@ -205,6 +209,28 @@ function CharacterExtras({ ing, projectId }: { ing: Ingredient; projectId: strin
           <LayersIcon />
           {views.length ? "Views" : "Add views"}
         </Button>
+      </div>
+      <div className="space-y-1" data-testid={`character-voice-${ing.key}`}>
+        <Label htmlFor={`voice-${ing.id}`}>Voice</Label>
+        <VoicePicker
+          id={`voice-${ing.id}`}
+          value={ing.voice_id}
+          hints={ing.voice_hints}
+          onChange={(v) => update.mutate({ id: ing.id, body: { voice_id: v } })}
+          onDesign={() => setDesigning(true)}
+        />
+        {update.error && <p className="text-destructive text-xs">{update.error.message}</p>}
+        {designing && (
+          <VoiceDesigner
+            open
+            onOpenChange={setDesigning}
+            initialName={ing.name}
+            initialDescription={Object.values(ing.voice_hints ?? {})
+              .filter(Boolean)
+              .join(", ")}
+            onSaved={(v) => update.mutate({ id: ing.id, body: { voice_id: v.id } })}
+          />
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         {badge && <Badge variant={badge.variant}>{badge.label}</Badge>}

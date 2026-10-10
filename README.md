@@ -4,7 +4,7 @@ A locally-running, single-user AI filmmaking studio inspired by Google Flow. Rea
 backend; image/video/audio generation runs on your GPU. See [SPEC.md](SPEC.md) for the full design and
 [docs/DECISIONS.md](docs/DECISIONS.md) for implementation decisions.
 
-**Status:** milestones **M0** through **M5** are done.
+**Status:** milestones **M0** through **M6** are done.
 
 - **M0:** projects, a SQLite-backed job queue, a supervised GPU worker process running the **FakeEngine**
   (placeholder outputs, no GPU needed), live progress over WebSocket, the Playground, and the app shell.
@@ -29,9 +29,39 @@ backend; image/video/audio generation runs on your GPU. See [SPEC.md](SPEC.md) f
   worker.
 - **M5:** the timeline. **Auto-assemble** lays out every shot's selected take. You can reorder, trim, add
   crossfades and fades, place audio, preview, and **Export** a 720p or 1080p MP4.
+- **M6:** audio. Characters get **voices** (Kokoro's built-ins, or custom voices designed from a text
+  description), shots get **dialogue** and **sound effects** made to fit the clip (MMAudio reads the take's
+  picture), and scenes or the whole film get **music** (MusicGen). Everything lands on the timeline and in
+  the export.
 
-Audio generation arrives in M6; until then the Playground's audio tabs use FakeEngine placeholders, and the
-timeline takes uploaded audio.
+## Audio (M6)
+
+- **Install:** set `allow_pickle_weights = true` in `config.toml` (Kokoro and MMAudio only publish PyTorch
+  pickles; LocalFlow loads them with `torch.load(weights_only=True)`), then install **Kokoro-82M**
+  (0.4 GB), **MMAudio large 44.1 kHz v2** (10.7 GB including its CLIP and vocoder) and **MusicGen small**
+  (2.4 GB) from **Models → Catalog**.
+- **Voices** (**Cast library → Voices**):
+  - Kokoro has 41 built-in voices in English (US/UK), Spanish, French, Hindi, Italian and Portuguese.
+    Press ▶ to hear a sample; samples are cached.
+  - **New voice** makes a custom voice: a base voice blended with up to two others at your pace. Describe
+    it ("a weathered old fisherman; gravelly, slow and kind") and **Design with AI** picks the settings.
+    **Audition** before saving.
+  - Give a character its voice in the character wizard's **Voice** step or on its card in **Ingredients**.
+    Without one, a voice is suggested from the character's voice hints.
+- **Shot audio** (shot panel → **Audio**):
+  - The plan shows who says what, with which voice, and whether the dialogue fits the clip.
+  - **Generate dialogue** speaks all lines into one track as long as the clip. Lines are sped up to at
+    most 1.15× to fit (or keep the natural pace); a warning shows if they still run long, so extend the
+    shot or shorten them.
+  - **Generate sound effects** makes audio synchronized to the selected take from the shot's SFX prompt.
+  - The newest take of each is used, and **Use** switches back to an older one. If the timeline already
+    has the shot, its Dialogue and SFX clips update in place.
+- **Music:** on the timeline, press **+** on Music → **Generate music** for the whole film or one scene.
+  It uses the shots' music cues unless you write a prompt (MusicGen makes up to 30 s) and is placed on the
+  Music track when done.
+- **Playground → Speech** has a voice picker too.
+- **Speed:** Kokoro takes about 2 s per shot (12 s for the first job). MMAudio takes about 30 s to load,
+  then about 3 s per 5 s take. Takes over 10 s are made in overlapping 8 s windows.
 
 ## Timeline and export (M5)
 

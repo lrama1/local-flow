@@ -38,6 +38,8 @@ def _query_token_allowed(scope: Scope) -> bool:
         # <img> sources: Cast library images and character template thumbnails (Section 11.7)
         or (path.startswith("/api/library/characters/") and "/images/" in path)
         or (path.startswith("/api/character-templates/") and path.endswith("/thumbnail"))
+        # <audio> source: cached voice samples (Section 12.2)
+        or (path.startswith("/api/voices/") and path.endswith("/preview.wav"))
     )
 
 

@@ -78,13 +78,42 @@ gpu = [
     "sentencepiece>=0.2.2",
     "protobuf>=6.30.0",
     "safetensors>=0.8.0",
+    # Audio (M6): Kokoro TTS (+ its English G2P and spaCy model), MMAudio video-to-audio.
+    "kokoro>=0.9.4",
+    "en-core-web-sm",
+    "mmaudio",
+    "torchvision>=0.29.1",
+    "open-clip-torch>=3.3.0",
+    "torchdiffeq>=0.2.5",
+    "einops>=0.8.0",
+    "omegaconf>=2.3.0",
 ]
 
 [tool.uv]
 default-groups = ["dev", "gpu"]
+# MMAudio's own requirements cover training and its Gradio demo; inference needs none of these
+# (DECISIONS M6). A never-true marker drops a package; numpy's `<2.1` pin is relaxed.
+override-dependencies = [
+    "numpy>=2.0",
+    "gradio; sys_platform == 'never'",
+    "tensorboard; sys_platform == 'never'",
+    "gitpython; sys_platform == 'never'",
+    "hydra-core; sys_platform == 'never'",
+    "hydra-colorlog; sys_platform == 'never'",
+    "nitrous-ema; sys_platform == 'never'",
+    "tensordict; sys_platform == 'never'",
+    "colorlog; sys_platform == 'never'",
+    "opencv-python; sys_platform == 'never'",
+    "av; sys_platform == 'never'",
+    "torchcodec; sys_platform == 'never'",
+    "cython; sys_platform == 'never'",
+]
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cu130" }]  # CUDA 13 wheels (RTX 50-series / sm_120 needs CUDA >= 12.8)
+torchvision = [{ index = "pytorch-cu130" }]
+mmaudio = { git = "https://github.com/hkchengrex/MMAudio", rev = "974010a026c731054592d8f777218bd9d85a6c24" }
+en-core-web-sm = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl" }
 
 [[tool.uv.index]]
 name = "pytorch-cu130"

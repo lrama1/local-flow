@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from localflow.main import create_app
+from localflow.models import Voice
 from localflow.services.llm.catalog import KeyCheck
 from localflow.services.llm.fake import FakeLLMProvider
 from localflow.services.secrets import MemoryKeyStore, SecretStore
@@ -266,12 +267,25 @@ def test_wizard_character_survives_bible_rerun_with_info_and_voice(h: Harness) -
         "tone": "warm, husky",
     }
     draft = h.post(f"/api/projects/{pid}/characters", {"fields": {"name": "Pip"}}, status=201)
+    with h.client.app.state.services.db.session() as s:  # no worker here, so no synced built-ins
+        dev = Voice(
+            kind="builtin",
+            adapter_key="fake",
+            native_id="fake_dev",
+            name="Dev",
+            language="en-US",
+            gender="male",
+            description="relaxed, conversational",
+        )
+        s.add(dev)
+        s.commit()
+        dev_id = dev.id
     r = h.client.patch(
         f"/api/ingredients/{draft['id']}",
         json={
             "visual_prompt": "a small boy in a red raincoat",
             "character_info": "Curious; collects sea glass.",
-            "voice_id": "am_puck",
+            "voice_id": dev_id,
             "voice_hints": {"gender": "male", "age": "child", "tone": "bright"},
             "draft": False,
         },
@@ -289,7 +303,8 @@ def test_wizard_character_survives_bible_rerun_with_info_and_voice(h: Harness) -
     bible_call = [c for c in h.fake.calls if c["purpose"] == "bible"][-1]
     user_msg = bible_call["messages"][1]["content"]
     assert '"key": "pip"' in user_msg and "Curious; collects sea glass." in user_msg
-    assert '"name": "am_puck"' in user_msg and '"description": "male, child, bright"' in user_msg
+    # M6: the assigned voice's name and description (gender + traits) replace the raw hints.
+    assert '"name": "Dev"' in user_msg and '"description": "male, relaxed, conversational"' in user_msg
     assert "Ghost" not in user_msg and "translucent sailor" not in user_msg
 
 

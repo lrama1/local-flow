@@ -259,6 +259,9 @@ class ShotFields(BaseModel):
     selected_keyframe_asset_id: str | None = None
     selected_end_keyframe_asset_id: str | None = None
     selected_video_asset_id: str | None = None
+    selected_audio_asset_ids: list[str] | None = Field(
+        default=None, max_length=8, description="Audio of this project placed with the shot (dialogue, SFX)"
+    )
     reference_asset_ids: list[str] | None = Field(
         default=None, max_length=3, description="Keyframe reference override; null restores automatic"
     )

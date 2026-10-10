@@ -14,6 +14,7 @@ Purpose = Literal[
     "prompt_rewrite",
     "character_expand",
     "character_describe",
+    "voice_design",
     "vision_review",
 ]
 PURPOSES: tuple[Purpose, ...] = (
@@ -23,6 +24,7 @@ PURPOSES: tuple[Purpose, ...] = (
     "prompt_rewrite",
     "character_expand",
     "character_describe",
+    "voice_design",
 )
 
 

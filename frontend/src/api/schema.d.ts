@@ -1321,6 +1321,230 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/voices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Voices
+         * @description Custom voices first, then built-ins by model, language and quality.
+         */
+        get: operations["list_voices_api_voices_get"];
+        put?: never;
+        /** Create Voice */
+        post: operations["create_voice_api_voices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voices/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest Voice
+         * @description The best available built-in voice for a character's voice hints.
+         */
+        get: operations["suggest_voice_api_voices_suggest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voices/design": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Design Voice
+         * @description Suggested custom-voice params for a text description (LLM purpose `voice_design`).
+         */
+        post: operations["design_voice_api_voices_design_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voices/audition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Audition Voice
+         * @description Speaks a sample line with unsaved settings; play the job's audio asset when it completes.
+         */
+        post: operations["audition_voice_api_voices_audition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voices/{voice_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Voice */
+        get: operations["get_voice_api_voices__voice_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Voice
+         * @description Custom voices only; characters using it go back to "no voice".
+         */
+        delete: operations["delete_voice_api_voices__voice_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Voice
+         * @description Custom voices only. Changing the sound drops the cached preview.
+         */
+        patch: operations["update_voice_api_voices__voice_id__patch"];
+        trace?: never;
+    };
+    "/api/voices/{voice_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Voice
+         * @description Returns the cached sample's URL, or queues a TTS job that caches it (`voices.updated` when done).
+         */
+        post: operations["preview_voice_api_voices__voice_id__preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/voices/{voice_id}/preview.wav": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Voice Preview File */
+        get: operations["voice_preview_file_api_voices__voice_id__preview_wav_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shots/{shot_id}/audio-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Audio Plan
+         * @description Who says what with which voice, whether it fits the clip, and the SFX prompt, without queuing.
+         */
+        post: operations["audio_plan_api_shots__shot_id__audio_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shots/{shot_id}/generate-audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Audio
+         * @description Dialogue (one clip-length TTS track) and/or SFX (video-to-audio on the selected take). Each result
+         *     becomes the shot's selected audio for its part.
+         */
+        post: operations["generate_audio_api_shots__shot_id__generate_audio_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shots/{shot_id}/select-audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Select Audio
+         * @description Makes an audio candidate the shot's dialogue or SFX (replacing the previous one of that part).
+         */
+        post: operations["select_audio_api_shots__shot_id__select_audio_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/generate-music": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Music
+         * @description Music for the film or one scene from the shots' music cues; placed on the Music track when done.
+         */
+        post: operations["generate_music_api_projects__project_id__generate_music_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/character-templates": {
         parameters: {
             query?: never;
@@ -1794,6 +2018,59 @@ export interface components {
             /** Favorite */
             favorite?: boolean | null;
         };
+        /** AudioPlanOut */
+        AudioPlanOut: {
+            /**
+             * Clip S
+             * @description The length the audio is made for: the selected take, else the shot
+             */
+            clip_s: number;
+            /** Has Take */
+            has_take: boolean;
+            /** Lines */
+            lines: components["schemas"]["DialoguePlanLine"][];
+            /**
+             * Speech S
+             * @description Estimated dialogue length incl. lead-in and pauses
+             */
+            speech_s: number;
+            /**
+             * Fit Speed
+             * @description Speed-up needed to fit the clip (1 = fits)
+             */
+            fit_speed: number;
+            /**
+             * Fits
+             * @description Fits within max_speed
+             */
+            fits: boolean;
+            /** Tts Model */
+            tts_model: string | null;
+            /** Sfx Prompt */
+            sfx_prompt: string;
+            /** V2A Model */
+            v2a_model: string | null;
+            /** Selected */
+            selected: {
+                [key: string]: string | null;
+            };
+            /** Notes */
+            notes: string[];
+        };
+        /**
+         * AuditionBody
+         * @description Hear unsaved settings: a base voice plus params.
+         */
+        AuditionBody: {
+            /** Base Voice Id */
+            base_voice_id: string;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            };
+            /** Text */
+            text?: string | null;
+        };
         /** AutoAssembleBody */
         AutoAssembleBody: {
             /**
@@ -2173,6 +2450,32 @@ export interface components {
              * @default
              */
             emotion?: string;
+        };
+        /** DialoguePlanLine */
+        DialoguePlanLine: {
+            /** Index */
+            index: number;
+            /** Character Ingredient Id */
+            character_ingredient_id: string | null;
+            /** Speaker */
+            speaker: string;
+            /** Line */
+            line: string;
+            /** Emotion */
+            emotion: string;
+            /** Voice Id */
+            voice_id: string | null;
+            /** Voice Name */
+            voice_name: string | null;
+            /**
+             * Voice Source
+             * @enum {string}
+             */
+            voice_source: "character" | "suggested" | "none";
+            /** Speed */
+            speed: number;
+            /** Estimated S */
+            estimated_s: number;
         };
         /**
          * DraftCreate
@@ -3418,6 +3721,46 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** MusicGenBody */
+        MusicGenBody: {
+            /**
+             * Scope
+             * @default film
+             * @enum {string}
+             */
+            scope?: "film" | "scene";
+            /** Scene Id */
+            scene_id?: string | null;
+            /**
+             * Prompt
+             * @description Defaults to the shots' music cues
+             */
+            prompt?: string | null;
+            /** Duration S */
+            duration_s?: number | null;
+            /** Model Entry Id */
+            model_entry_id?: string | null;
+            /**
+             * Place
+             * @description Add it to the timeline's Music track when it's done
+             * @default true
+             */
+            place?: boolean;
+            /** Seed */
+            seed?: number | null;
+        };
+        /** MusicGenOut */
+        MusicGenOut: {
+            job: components["schemas"]["JobOut"];
+            /** Prompt */
+            prompt: string;
+            /** Duration S */
+            duration_s: number;
+            /** Model Name */
+            model_name: string | null;
+            /** Notes */
+            notes: string[];
+        };
         /** Page[AssetOut] */
         Page_AssetOut_: {
             /** Items */
@@ -3444,6 +3787,30 @@ export interface components {
         PlaygroundInfo: {
             /** Project Id */
             project_id: string;
+        };
+        /** PreviewBody */
+        PreviewBody: {
+            /**
+             * Text
+             * @description Defaults to a sample line
+             */
+            text?: string | null;
+            /**
+             * Refresh
+             * @description Regenerate even if a sample is cached
+             * @default false
+             */
+            refresh?: boolean;
+        };
+        /** PreviewOut */
+        PreviewOut: {
+            /**
+             * Url
+             * @description Ready to play (cached sample)
+             */
+            url?: string | null;
+            /** @description Queued: play the job's audio asset when it completes */
+            job?: components["schemas"]["JobOut"] | null;
         };
         /** PrimaryBody */
         PrimaryBody: {
@@ -3905,6 +4272,21 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** SelectAudioBody */
+        SelectAudioBody: {
+            /** Asset Id */
+            asset_id: string;
+            /**
+             * Slot
+             * @description For uploaded audio: dialogue or sfx
+             */
+            slot?: ("dialogue" | "sfx") | null;
+        };
+        /** SelectAudioOut */
+        SelectAudioOut: {
+            /** Selected Audio Asset Ids */
+            selected_audio_asset_ids: string[];
+        };
         /** SelectBody */
         SelectBody: {
             /**
@@ -3919,6 +4301,89 @@ export interface components {
         SetViewBody: {
             /** Asset Id */
             asset_id: string | null;
+        };
+        /** ShotAudioBody */
+        ShotAudioBody: {
+            /** Parts */
+            parts?: ("dialogue" | "sfx")[];
+            params?: components["schemas"]["ShotAudioParams"];
+        };
+        /** ShotAudioOut */
+        ShotAudioOut: {
+            /**
+             * Clip S
+             * @description The length the audio is made for: the selected take, else the shot
+             */
+            clip_s: number;
+            /** Has Take */
+            has_take: boolean;
+            /** Lines */
+            lines: components["schemas"]["DialoguePlanLine"][];
+            /**
+             * Speech S
+             * @description Estimated dialogue length incl. lead-in and pauses
+             */
+            speech_s: number;
+            /**
+             * Fit Speed
+             * @description Speed-up needed to fit the clip (1 = fits)
+             */
+            fit_speed: number;
+            /**
+             * Fits
+             * @description Fits within max_speed
+             */
+            fits: boolean;
+            /** Tts Model */
+            tts_model: string | null;
+            /** Sfx Prompt */
+            sfx_prompt: string;
+            /** V2A Model */
+            v2a_model: string | null;
+            /** Selected */
+            selected: {
+                [key: string]: string | null;
+            };
+            /** Notes */
+            notes: string[];
+            /** Jobs */
+            jobs: components["schemas"]["JobOut"][];
+        };
+        /** ShotAudioParams */
+        ShotAudioParams: {
+            /**
+             * Speed
+             * @description Dialogue pace (on top of each voice's)
+             * @default 1
+             */
+            speed?: number;
+            /**
+             * Fit
+             * @description speed: speed lines up (<= max_speed) to fit the clip
+             * @default speed
+             * @enum {string}
+             */
+            fit?: "speed" | "none";
+            /**
+             * Max Speed
+             * @default 1.15
+             */
+            max_speed?: number;
+            /** Tts Model Entry Id */
+            tts_model_entry_id?: string | null;
+            /**
+             * Sfx Prompt
+             * @description Defaults to the shot's
+             */
+            sfx_prompt?: string | null;
+            /** Sfx Negative Prompt */
+            sfx_negative_prompt?: string | null;
+            /** Sfx Steps */
+            sfx_steps?: number | null;
+            /** V2A Model Entry Id */
+            v2a_model_entry_id?: string | null;
+            /** Seed */
+            seed?: number | null;
         };
         /** ShotCreate */
         ShotCreate: {
@@ -3960,6 +4425,11 @@ export interface components {
             selected_end_keyframe_asset_id?: string | null;
             /** Selected Video Asset Id */
             selected_video_asset_id?: string | null;
+            /**
+             * Selected Audio Asset Ids
+             * @description Audio of this project placed with the shot (dialogue, SFX)
+             */
+            selected_audio_asset_ids?: string[] | null;
             /**
              * Reference Asset Ids
              * @description Keyframe reference override; null restores automatic
@@ -4109,6 +4579,11 @@ export interface components {
             /** Selected Video Asset Id */
             selected_video_asset_id?: string | null;
             /**
+             * Selected Audio Asset Ids
+             * @description Audio of this project placed with the shot (dialogue, SFX)
+             */
+            selected_audio_asset_ids?: string[] | null;
+            /**
              * Reference Asset Ids
              * @description Keyframe reference override; null restores automatic
              */
@@ -4120,6 +4595,41 @@ export interface components {
             shot_id: string;
             /** Reason */
             reason: string;
+        };
+        /**
+         * SpeechLine
+         * @description One dialogue line in a multi-voice TTS request (Section 12.1).
+         */
+        SpeechLine: {
+            /** Text */
+            text: string;
+            /**
+             * Voice Id
+             * @description Adapter-native voice; None = the default voice
+             */
+            voice_id?: string | null;
+            /**
+             * Voice Params
+             * @description Custom-voice params
+             */
+            voice_params?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Speed
+             * @default 1
+             */
+            speed?: number;
+            /**
+             * Start S
+             * @description None = after the previous line
+             */
+            start_s?: number | null;
+            /**
+             * Key
+             * @description Caller's id for this line, echoed in the result
+             */
+            key?: string | null;
         };
         /** StoryBible */
         StoryBible: {
@@ -4486,15 +4996,47 @@ export interface components {
             mentions?: string[] | null;
             /** Model Entry Id */
             model_entry_id?: string | null;
-            /** Text */
-            text: string;
+            /**
+             * Text
+             * @default
+             */
+            text?: string;
             /** Voice Id */
             voice_id?: string | null;
+            /** Voice Params */
+            voice_params?: {
+                [key: string]: unknown;
+            };
             /**
              * Speed
              * @default 1
              */
             speed?: number;
+            /** Lines */
+            lines?: components["schemas"]["SpeechLine"][];
+            /**
+             * Duration S
+             * @description Dialogue: make the track this long (the clip length)
+             */
+            duration_s?: number | null;
+            /**
+             * Lead S
+             * @description Dialogue: silence before the first line
+             * @default 0.3
+             */
+            lead_s?: number;
+            /**
+             * Gap S
+             * @description Dialogue: pause between lines
+             * @default 0.35
+             */
+            gap_s?: number;
+            /**
+             * Max Speed
+             * @description Dialogue: speed-up allowed to fit the lines into the clip
+             * @default 1.15
+             */
+            max_speed?: number;
             /** Seed */
             seed?: number | null;
             /** Extra */
@@ -4938,6 +5480,48 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** VoiceCreate */
+        VoiceCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Base Voice Id
+             * @description A built-in voice to start from
+             */
+            base_voice_id: string;
+            /**
+             * Description
+             * @default
+             */
+            description?: string;
+            /**
+             * Params
+             * @description Adapter voice params (blend, speed)
+             */
+            params?: {
+                [key: string]: unknown;
+            };
+        };
+        /** VoiceDesignBody */
+        VoiceDesignBody: {
+            /** Base Voice Id */
+            base_voice_id: string;
+            /** Description */
+            description: string;
+            llm?: components["schemas"]["LlmChoice"] | null;
+        };
+        /** VoiceDesignOut */
+        VoiceDesignOut: {
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Notes */
+            notes: string;
+            /** Warnings */
+            warnings?: string[];
+            usage?: components["schemas"]["UsageOut"] | null;
+        };
         /** VoiceHints */
         VoiceHints: {
             /**
@@ -4973,6 +5557,87 @@ export interface components {
              * @default
              */
             tone?: string;
+        };
+        /** VoiceOut */
+        VoiceOut: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "builtin" | "custom";
+            /** Adapter Key */
+            adapter_key: string;
+            /** Native Id */
+            native_id: string | null;
+            /** Base Voice Id */
+            base_voice_id: string | null;
+            /** Base Voice Name */
+            base_voice_name?: string | null;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Language */
+            language: string;
+            /** Gender */
+            gender: string;
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /**
+             * Quality
+             * @default
+             */
+            quality?: string;
+            /**
+             * Traits
+             * @default
+             */
+            traits?: string;
+            /**
+             * Available
+             * @description Its TTS model is installed and the worker can run it
+             */
+            available: boolean;
+            /**
+             * Preview Url
+             * @description Cached sample (GET, ?token= allowed)
+             */
+            preview_url?: string | null;
+            /** Preview Text */
+            preview_text?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** VoiceSuggestion */
+        VoiceSuggestion: {
+            voice: components["schemas"]["VoiceOut"] | null;
+            /** Reason */
+            reason: string;
+        };
+        /** VoiceUpdate */
+        VoiceUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Base Voice Id */
+            base_voice_id?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Params */
+            params?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** WorkerInfo */
         WorkerInfo: {
@@ -7923,6 +8588,471 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_voices_api_voices_get: {
+        parameters: {
+            query?: {
+                adapter_key?: string | null;
+                /** @description Only voices whose TTS model is installed */
+                available?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_voice_api_voices_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    suggest_voice_api_voices_suggest_get: {
+        parameters: {
+            query?: {
+                gender?: string;
+                age?: string;
+                tone?: string;
+                language?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceSuggestion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    design_voice_api_voices_design_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceDesignBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceDesignOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audition_voice_api_voices_audition_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuditionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_voice_api_voices__voice_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                voice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_voice_api_voices__voice_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                voice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_voice_api_voices__voice_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                voice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_voice_api_voices__voice_id__preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                voice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreviewBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_preview_file_api_voices__voice_id__preview_wav_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                voice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    audio_plan_api_shots__shot_id__audio_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShotAudioParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AudioPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_audio_api_shots__shot_id__generate_audio_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShotAudioBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShotAudioOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    select_audio_api_shots__shot_id__select_audio_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SelectAudioBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SelectAudioOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_music_api_projects__project_id__generate_music_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MusicGenBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MusicGenOut"];
                 };
             };
             /** @description Validation Error */

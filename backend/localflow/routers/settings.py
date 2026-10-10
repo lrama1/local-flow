@@ -44,6 +44,7 @@ _PURPOSES = [
     "prompt_rewrite",
     "character_expand",
     "character_describe",
+    "voice_design",
 ]
 
 

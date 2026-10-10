@@ -233,7 +233,7 @@ def test_draft_cancel_and_key_rules(c: TestClient) -> None:
 def test_upload_describe_expand_and_clean_reference(c: TestClient, fake_llm: FakeLLMProvider) -> None:
     pid = project(c, style=None)
     caps = ok(c, "GET", "/api/characters/capabilities", params={"project_id": pid})
-    assert caps["expand"] and caps["describe"] and not caps["edit_model"] and not caps["voices"]
+    assert caps["expand"] and caps["describe"] and not caps["edit_model"] and caps["voices"]  # fake TTS (M6)
 
     draft = ok(c, "POST", f"/api/projects/{pid}/characters", 201, json={"source": "upload"})
     up = ok(
@@ -288,20 +288,21 @@ def file_hash(c: TestClient, pid: str, asset_id: str) -> str:
 def test_library_save_cast_update_push(c: TestClient) -> None:
     p1, p2 = project(c, "One", style=None), project(c, "Two", style=None)
     mara = character(c, p1, "Mara", views=("full_body", "three_view"))
+    aria = next(v for v in ok(c, "GET", "/api/voices") if v["native_id"] == "fake_aria")["id"]
     mara = ok(
         c,
         "PATCH",
         f"/api/ingredients/{mara['id']}",
         json={
             "character_info": "Patient; hums shanties.",
-            "voice_id": "af_heart",
+            "voice_id": aria,
             "voice_hints": {"gender": "female", "age": "60s", "tone": "warm"},
             "body_outfit_prompt": "navy peacoat",
         },
     )
     lib = ok(c, "POST", f"/api/ingredients/{mara['id']}/save-to-library", 201)
     assert lib["key"] == "mara" and lib["character_info"] == "Patient; hums shanties."
-    assert lib["voice_id"] == "af_heart" and lib["voice_hints"]["tone"] == "warm"
+    assert lib["voice_id"] == aria and lib["voice_hints"]["tone"] == "warm"
     assert [(i["view"], i["is_primary"]) for i in lib["images"]] == [
         ("primary", True),
         ("full_body", False),
@@ -320,7 +321,7 @@ def test_library_save_cast_update_push(c: TestClient) -> None:
         c, "POST", f"/api/projects/{p2}/ingredients/import", 201, json={"library_character_id": lib["id"]}
     )
     assert cast["origin"] == "library" and cast["key"] == "mara" and cast["locked"]
-    assert cast["character_info"] == "Patient; hums shanties." and cast["voice_id"] == "af_heart"
+    assert cast["character_info"] == "Patient; hums shanties." and cast["voice_id"] == aria
     assert cast["voice_hints"]["tone"] == "warm" and cast["body_outfit_prompt"] == "navy peacoat"
     assert set(cast["views"]) == {"primary", "full_body", "three_view"} and cast["library_status"] == "synced"
     for view in ("primary", "full_body", "three_view"):

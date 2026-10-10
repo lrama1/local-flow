@@ -32,6 +32,7 @@ import type { ApiError, Ingredient, Schemas } from "@/api/client";
 import { thumbUrl, useGenerateIngredient, useUploadIngredientImage } from "@/api/imagegen";
 import { usePlayground } from "@/api/queries";
 import { sk } from "@/api/story";
+import { useSuggestVoice } from "@/api/voices";
 import { ModelPicker } from "@/components/ModelPicker";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +44,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input, Label, NativeSelect, Textarea } from "@/components/ui/primitives";
+import { VoicePicker } from "@/components/VoicePicker";
 import { gateLicense } from "@/features/models/gateLicense";
+import { VoiceDesigner } from "@/features/voices/VoiceDesigner";
 import { cn } from "@/lib/utils";
 import { ViewCandidates } from "./ViewCandidates";
 import { ViewsEditor } from "./ViewsEditor";
@@ -71,6 +74,7 @@ interface Fields {
   character_info: string;
   body_outfit_prompt: string;
   voice_hints: VoiceHints;
+  voice_id: string | null;
   template_key: string | null;
 }
 
@@ -81,6 +85,7 @@ const EMPTY: Fields = {
   character_info: "",
   body_outfit_prompt: "",
   voice_hints: { gender: "", age: "", tone: "" },
+  voice_id: null,
   template_key: null,
 };
 
@@ -92,6 +97,7 @@ function fromTemplate(t: CharacterTemplate): Fields {
     character_info: t.character_info,
     body_outfit_prompt: t.body_outfit_prompt,
     voice_hints: { gender: "", age: "", tone: "", ...t.voice_hints },
+    voice_id: null,
     template_key: t.key,
   };
 }
@@ -104,6 +110,7 @@ function updateBody(f: Fields): Schemas["IngredientUpdate"] {
     character_info: f.character_info || null,
     body_outfit_prompt: f.body_outfit_prompt || null,
     voice_hints: f.voice_hints,
+    voice_id: f.voice_id,
     template_key: f.template_key,
   };
 }
@@ -194,6 +201,8 @@ function WizardBody({
   const [key, setKey] = useState("");
   const [keyTouched, setKeyTouched] = useState(false);
   const [alsoLibrary, setAlsoLibrary] = useState(false);
+  const [designing, setDesigning] = useState(false);
+  const suggestedVoice = useSuggestVoice(fields.voice_hints, step === "voice").data?.voice?.id;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const savedRef = useRef(false);
@@ -582,12 +591,9 @@ function WizardBody({
 
         {step === "voice" && (
           <div className="space-y-3">
-            {!caps?.voices && (
-              <p className="text-muted-foreground rounded-md border p-3 text-xs">
-                Choosing and previewing a voice arrives with text-to-speech (M6). Describe the voice now: the
-                story LLM uses it for dialogue, and it pre-selects a voice later.
-              </p>
-            )}
+            <p className="text-muted-foreground text-xs">
+              Describe the voice: the story LLM uses it for dialogue, and it suggests a matching voice.
+            </p>
             <div className="grid gap-3 sm:grid-cols-3">
               {(["gender", "age", "tone"] as const).map((k) => (
                 <div key={k} className="space-y-1">
@@ -603,6 +609,32 @@ function WizardBody({
                 </div>
               ))}
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="cw-voice">Voice</Label>
+              <VoicePicker
+                id="cw-voice"
+                value={fields.voice_id}
+                onChange={(v) => set({ voice_id: v })}
+                hints={fields.voice_hints}
+                onDesign={caps?.voices ? () => setDesigning(true) : undefined}
+              />
+            </div>
+            {designing && (
+              <VoiceDesigner
+                open
+                onOpenChange={setDesigning}
+                initialName={fields.name}
+                initialDescription={[
+                  fields.voice_hints.gender,
+                  fields.voice_hints.age,
+                  fields.voice_hints.tone,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+                initialBaseId={suggestedVoice}
+                onSaved={(v) => set({ voice_id: v.id })}
+              />
+            )}
           </div>
         )}
 

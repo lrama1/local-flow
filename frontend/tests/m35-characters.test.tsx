@@ -260,7 +260,8 @@ test("template wizard: portraits, skip views, name, voice, save to the project a
   expect(within(wizard).getByLabelText(/^Key/)).toHaveValue("old-tom");
   await userEvent.click(within(wizard).getByRole("button", { name: "Next" }));
 
-  expect(within(wizard).getByText(/arrives with text-to-speech \(M6\)/)).toBeInTheDocument();
+  expect(within(wizard).getByText(/suggests a matching voice/)).toBeInTheDocument();
+  expect(await within(wizard).findByTestId("no-voices")).toBeInTheDocument(); // no TTS model here
   expect(within(wizard).getByLabelText("gender")).toHaveValue("male");
   await userEvent.click(within(wizard).getByRole("button", { name: "Next" }));
 

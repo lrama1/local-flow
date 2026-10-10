@@ -252,7 +252,7 @@ All IDs are ULIDs (strings). All tables have `created_at` and `updated_at`. JSON
 `id, key, name, description, visual_prompt, negative_prompt, character_info, body_outfit_prompt, voice_id (nullable), lora_ids_json, template_key (nullable), images_json (list of {file, view, is_primary}; files relative to library/characters/<id>/), source_project_id (nullable)`
 
 **voices** (global, Section 12.2)
-`id, kind ("builtin"|"custom"), adapter_key, base_voice_id, name, description, params_json, preview_path (nullable)`
+`id, kind ("builtin"|"custom"), adapter_key, native_id (builtin: the adapter's voice name, e.g. "af_heart"), base_voice_id (custom: a builtin voices.id), name, description, language, gender, params_json, meta_json (builtin: quality grade, traits), preview_path (nullable; library/voices/<id>/preview.wav), preview_text (nullable)`; unique `(adapter_key, kind, native_id)`
 
 **scenes**
 `id, project_id, story_id, index, title, summary, location_ingredient_id (nullable)`
@@ -648,15 +648,16 @@ The total respects the edit model's maximum reference count, falling back to the
 ### 12.1 Strategy
 1. If the shot's video adapter `supports_native_audio` and the user enables it, generate video with audio, using the dialogue and SFX folded into the prompt in that model's documented format.
 2. Otherwise, fallback pipeline per shot:
-   - **Dialogue:** TTS per line using the character ingredient's `voice_id` → WAV. Fit the timing to the shot (warn if too long; offer "speed up ≤ 1.15×" or "extend shot").
-   - **SFX/ambience:** video-to-audio (MMAudio) on the generated clip with `sfx_prompt` → WAV matching the clip duration.
-   - **Music:** per scene or whole film from `music_cue`s (optional model). The user can also upload music.
+   - **Dialogue:** TTS per line using the character ingredient's `voice_id` → WAV. Fit the timing to the shot (warn if too long; offer "speed up ≤ 1.15×" or "extend shot"). *As built (M6):* one TTS job per shot with `lines` (each with its voice and params) produces one WAV as long as the clip; a 0.3 s lead-in and 0.35 s gaps shrink first, then the pace rises to `max_speed`; dialogue still too long is kept and reported (`generation.output.overflow_s`). Speakers without a usable voice get one suggested from their voice hints. Emotions only adjust the pace (Kokoro has no emotion control).
+   - **SFX/ambience:** video-to-audio (MMAudio) on the generated clip with `sfx_prompt` → WAV matching the clip duration. *As built:* takes over 10 s are made in overlapping ~8 s windows joined with equal-power crossfades; the default negative prompt keeps speech and music out.
+   - **Music:** per scene or whole film from `music_cue`s (optional model). The user can also upload music. *As built:* MusicGen small (up to 30 s per job), placed on the Music track at the film's or scene's start.
+   - New dialogue and SFX takes become the shot's selected audio for their part and, if the timeline holds the shot's take, replace its clip on the Dialogue/SFX track in place.
 3. Lip-sync is **out of scope for v1**. Record it as a future adapter type (`LipSync`).
 
 ### 12.2 Voices
 - The `voices` table holds built-in voices (synced from the installed TTS adapters when the worker starts, `kind="builtin"`) and custom voices. A character's `voice_id` references `voices.id`. Voice hints from the bible or template auto-suggest a voice.
 - **Preset voices:** listed with audition (a sample line, preview cached as WAV).
-- **Custom voices:** pick a base voice, name it, and describe the sound ("fast-paced, slightly raspy"). If the TTS adapter declares `supports_voice_design` (text-described voices), the description is passed directly. Otherwise `purpose=voice_design` maps the description onto the adapter's voice-param JSON schema (e.g., base-voice blend weights, speed, pitch where supported), validated with Pydantic. The user can tweak the params and audition before saving. Custom voices are global, so library characters keep them across projects.
+- **Custom voices:** pick a base voice, name it, and describe the sound ("fast-paced, slightly raspy"). If the TTS adapter declares `supports_voice_design` (text-described voices), the description is passed directly. Otherwise `purpose=voice_design` maps the description onto the adapter's voice-param JSON schema (e.g., base-voice blend weights, speed, pitch where supported), validated with Pydantic. The user can tweak the params and audition before saving. Custom voices are global, so library characters keep them across projects. *As built (M6):* Kokoro's params (`VoiceParams`) are up to two blend voices of the same language with weights, a base weight, and a pace (0.7–1.4); no adapter has `supports_voice_design` yet. Built-ins sync lazily when the set of usable TTS adapters changes; Japanese and Mandarin Kokoro voices are omitted (extra G2P packages).
 - Voice cloning from uploaded audio is out of scope for v1 (Section 1.3).
 
 ---
@@ -766,9 +767,13 @@ LLM endpoints are synchronous request/response with a 120 s timeout. The UI show
 - Event `library.updated` `{library_character_id}`
 
 **Voices** (Section 12.2)
-- `GET /voices` · `POST /voices` `{name, base_voice_id, description, params?}` · `PATCH/DELETE /voices/{id}` (custom only)
-- `POST /voices/design` `{base_voice_id, description}` → suggested params (LLM, synchronous)
-- `POST /voices/{id}/preview` `{text?}` → tts job
+- `GET /voices?adapter_key=&available=` · `POST /voices` `{name, base_voice_id, description, params?}` · `GET/PATCH/DELETE /voices/{id}` (PATCH/DELETE custom only; deleting unassigns characters)
+- `GET /voices/suggest?gender=&age=&tone=&language=` → `{voice, reason}` (best available built-in for voice hints)
+- `POST /voices/design` `{base_voice_id, description, llm?}` → `{params, notes, warnings, usage}` (LLM, synchronous)
+- `POST /voices/{id}/preview` `{text?, refresh?}` → `{url}` when a sample is cached, else `{job}` (tts job; cached when done) · `GET /voices/{id}/preview.wav` (`?token=` allowed)
+- `POST /voices/audition` `{base_voice_id, params, text?}` → `{job}` (unsaved settings)
+- `POST /generate/tts` accepts LocalFlow voice ids in `voice_id` (and per line in `lines`); the server picks the voice's model
+- Event `voices.updated`
 
 **Scenes & shots**
 - `GET /projects/{id}/scenes` (with nested shots) · `POST/PATCH/DELETE /scenes/{id}` · reorder `POST /projects/{id}/scenes/reorder`
@@ -778,9 +783,12 @@ LLM endpoints are synchronous request/response with a 120 s timeout. The UI show
 - `POST /shots/{id}/video-plan` (same body) → the same fields without `jobs`; queues nothing
 - `POST /shots/{id}/extend` `{asset_id? (default: the selected take), segments (1–4), prompt?, model_entry_id?, camera_intensity?, crossfade_frames? (0–8), params?}`. The result replaces the selected take if that was the source
 - `GET /camera-moves` → `{move: {intensity: prompt fragment}}`
-- `POST /shots/{id}/generate-audio` `{parts: ["dialogue","sfx"], params?}`
+- `POST /shots/{id}/generate-audio` `{parts: ["dialogue","sfx"], params?: {speed?, fit?: "speed"|"none", max_speed?, tts_model_entry_id?, sfx_prompt?, sfx_negative_prompt?, sfx_steps?, v2a_model_entry_id?, seed?}}` → the plan plus `jobs`. Takes have `target_ref {kind: "shot", shot_id, slot: "dialogue"|"sfx"}`
+- `POST /shots/{id}/audio-plan` (the params) → `{clip_s, has_take, lines: [{speaker, line, voice_id, voice_name, voice_source, speed, estimated_s}], speech_s, fit_speed, fits, tts_model, sfx_prompt, v2a_model, selected, notes}`; queues nothing
+- `POST /shots/{id}/select-audio` `{asset_id, slot?}` → `{selected_audio_asset_ids}` (one take per part)
+- `POST /projects/{id}/generate-music` `{scope: "film"|"scene", scene_id?, prompt?, duration_s?, model_entry_id?, place? (default true)}` → `{job, prompt, duration_s, model_name, notes}`
 - `POST /shots/{id}/select` `{slot: "keyframe"|"end_keyframe"|"video"|"audio", asset_id}`
-- `POST /projects/{id}/generate-all` `{keyframes?, videos?, auto_approve_keyframes? (default: config), extend?, camera_intensity?}` → `{keyframe_jobs, video_jobs, skipped: [{shot_id, reason}]}`. Shots with a take or a running job are skipped; with auto-approve, each new keyframe is selected and its video queued (audio comes with M6)
+- `POST /projects/{id}/generate-all` `{keyframes?, videos?, auto_approve_keyframes? (default: config), extend?, camera_intensity?}` → `{keyframe_jobs, video_jobs, skipped: [{shot_id, reason}]}`. Shots with a take or a running job are skipped; with auto-approve, each new keyframe is selected and its video queued (audio is generated per shot, from the shot panel)
 
 **Generic generation** (Playground, outside the story flow)
 - `POST /generate/{t2i|image_edit|t2v|i2v|flf2v|extend|tts|v2a|music}` → job

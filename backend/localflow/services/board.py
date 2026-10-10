@@ -25,6 +25,7 @@ from localflow.schemas.board import (
 from localflow.schemas.story import slugify
 from localflow.services.characters import mentions, store
 from localflow.services.events import EventBus
+from localflow.services.voice_store import check_voice
 
 _KIND_ORDER = {"character": 0, "location": 1, "prop": 2, "style": 3}
 _PROMPT_FIELDS = ("keyframe_prompt", "end_keyframe_prompt", "video_prompt")
@@ -131,6 +132,8 @@ class BoardService:
                     continue
                 if k == "primary_asset_id" and v is not None:
                     store.check_image(s, ing.project_id, v)
+                if k == "voice_id":
+                    check_voice(s, v)
                 if k == "voice_hints":
                     ing.voice_hints_json = dict(v or {})
                     continue
@@ -437,6 +440,15 @@ class BoardService:
                             "invalid_asset", "selected_video_asset_id must be a video in this project."
                         )
                 out[k] = v
+            elif k == "selected_audio_asset_ids":
+                v = list(dict.fromkeys(v or []))
+                for asset_id in v:
+                    a = s.get(Asset, asset_id)
+                    if a is None or a.project_id != project_id or a.type != "audio":
+                        raise bad_request(
+                            "invalid_asset", "selected_audio_asset_ids must be audio in this project."
+                        )
+                out["selected_audio_asset_ids_json"] = v
             elif k == "reference_asset_ids":
                 if v is not None:
                     v = list(dict.fromkeys(v))

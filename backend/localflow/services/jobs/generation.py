@@ -46,8 +46,14 @@ class GenerationService:
         self._adapters = adapters
         self.registry = registry
         self.mention_resolver: MentionResolver | None = None  # set by the container (characters service)
+        # TTS: LocalFlow voice ids -> adapter-native voices (+ picks the adapter); set by the container.
+        self.voice_resolver: Callable[[Any, dict[str, Any]], None] | None = None
 
     # --- adapters --------------------------------------------------------------------------------
+    def adapters(self) -> list[dict[str, Any]] | None:
+        """The worker's adapter descriptions (AdapterInfo dicts), or None while it's starting."""
+        return self._adapters()
+
     def usable_adapters(self, kind: str) -> set[str] | None:
         """Adapter keys the worker can run for `kind`, or None while the worker is starting."""
         adapters = self._adapters()
@@ -130,6 +136,8 @@ class GenerationService:
             resolved = self.mention_resolver(kind, project_id, prompt)
             if resolved is not None:
                 request["prompt"], prompt_raw, mention_keys = resolved.text, resolved.raw, resolved.keys
+        if kind == "tts" and self.voice_resolver is not None:
+            self.voice_resolver(body, request)
         adapter_key = self.resolve(kind, body, request, project)
         if adapter_key != FAKE and self.registry is not None:
             for lora in request.get("loras") or []:

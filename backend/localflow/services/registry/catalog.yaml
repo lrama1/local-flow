@@ -322,18 +322,25 @@
   adapter_key: mmaudio
   base_model: mmaudio
   source_ref: hkchengrex/MMAudio
-  license: CC BY-NC 4.0 (weights)
+  license: CC BY-NC 4.0 (weights); CLIP apple-amlr; BigVGAN MIT
   license_url: https://huggingface.co/hkchengrex/MMAudio
-  approx_size_gb: 6.3
+  approx_size_gb: 10.7
   requires_pickle: true
   notes: >-
-    Requires allow_pickle_weights = true. The mmaudio package fetches its CLIP and BigVGAN helpers on
-    first use (M6).
+    Requires allow_pickle_weights = true (all parts are loaded with torch.load(weights_only=True)).
+    Includes the CLIP image/text encoder and BigVGAN vocoder MMAudio needs, so nothing downloads at run
+    time. Uses about 6 GB of VRAM.
   parts:
     - role: base
       repo_id: hkchengrex/MMAudio
       allow_patterns:
         [weights/mmaudio_large_44k_v2.pth, ext_weights/synchformer_state_dict.pth, ext_weights/v1-44.pth]
+    - role: clip
+      repo_id: apple/DFN5B-CLIP-ViT-H-14-384
+      allow_patterns: [open_clip_config.json, open_clip_pytorch_model.bin]
+    - role: vocoder
+      repo_id: nvidia/bigvgan_v2_44khz_128band_512x
+      allow_patterns: [config.json, bigvgan_generator.pt]
 
 - key: ace-step-v1-3.5b
   name: ACE-Step v1 3.5B

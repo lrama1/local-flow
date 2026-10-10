@@ -9,6 +9,7 @@ from localflow.config import Settings
 from localflow.db import Database
 from localflow.models import Asset, Job
 from localflow.services.assets import AssetService
+from localflow.services.audiogen import AudioGenService
 from localflow.services.board import BoardService
 from localflow.services.characters.library import LibraryService
 from localflow.services.characters.service import CharacterService
@@ -30,6 +31,7 @@ from localflow.services.story.service import StoryService
 from localflow.services.timeline.export import ExportRunner
 from localflow.services.timeline.service import TimelineService
 from localflow.services.videogen import VideoGenService
+from localflow.services.voices import VoiceService
 
 
 @dataclass
@@ -56,6 +58,8 @@ class Services:
     videogen: VideoGenService
     timeline: TimelineService
     exports: ExportRunner
+    voices: VoiceService
+    audiogen: AudioGenService
 
 
 def build_services(
@@ -106,19 +110,24 @@ def build_services(
     story = StoryService(settings, db, llm, bus, video_profile=registry.render_profile)
     board = BoardService(settings, db, bus)
     videogen = VideoGenService(settings, db, generation, registry, imagegen, board, bus)
+    timeline = TimelineService(db, bus)
+    voices = VoiceService(settings, db, bus, generation, registry, assets, llm, generation.adapters)
+    audiogen = AudioGenService(db, generation, registry, board, voices, timeline, bus)
 
     def on_assets(job: Job, assets: list[Asset]) -> None:
         imagegen.on_job_assets(job, assets)
         videogen.on_job_assets(job, assets)
+        audiogen.on_job_assets(job, assets)
+        voices.on_job_assets(job, assets)
 
     supervisor.on_assets = on_assets
+    generation.voice_resolver = voices.resolve_tts
     templates = TemplateService(settings, db)
     library = LibraryService(settings, db, bus, assets)
     characters = CharacterService(
-        settings, db, bus, assets, board, generation, registry, llm, projects, templates
+        settings, db, bus, assets, board, generation, registry, llm, projects, templates, voices
     )
     generation.mention_resolver = characters.resolve_for_generation
-    timeline = TimelineService(db, bus)
     exports = ExportRunner(settings, jobs, assets, timeline, bus)
     return Services(
         settings,
@@ -143,6 +152,8 @@ def build_services(
         videogen,
         timeline,
         exports,
+        voices,
+        audiogen,
     )
 
 

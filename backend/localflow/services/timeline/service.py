@@ -202,6 +202,62 @@ class TimelineService:
         out = self._out(project_id, tl, row, notes + more)
         return AutoAssembleOut(**out.model_dump(), skipped=skipped)
 
+    # --- placing generated audio (M6) ------------------------------------------------------------------
+    def _with_timeline(self, project_id: str, edit: Any) -> bool:
+        """Loads the normalized timeline, applies `edit(tl) -> bool` and saves it if it changed."""
+        tl = self.load(project_id)
+        if not edit(tl):
+            return False
+        with self.db.session() as s:
+            durations = {a.id: a.duration_s for a in self._assets(s, project_id, tl).values()}
+            tl, _ = normalize(tl, durations)
+            self._save(s, project_id, tl)
+        self.bus.publish("timeline.updated", project_id=project_id)
+        return True
+
+    def sync_shot_audio(self, project_id: str, shot_id: str, asset: Asset, track_id: str) -> bool:
+        """If the timeline has the shot's take, swaps the shot's clip on `track_id` for `asset`, aligned with
+        the take (and trimmed like it). Returns whether the timeline changed."""
+
+        def edit(tl: TimelineData) -> bool:
+            video = next((c for c in tl.video.clips if c.shot_id == shot_id), None)
+            track = next((t for t in tl.audio if t.id == track_id), None)
+            if video is None or track is None or not asset.duration_s:
+                return False
+            track.clips = [c for c in track.clips if c.shot_id != shot_id]
+            in_s = min(video.in_s, max(0.0, asset.duration_s - 0.05))
+            track.clips.append(
+                Clip(
+                    asset_id=asset.id,
+                    start_s=video.start_s,
+                    in_s=in_s,
+                    out_s=asset.duration_s,
+                    shot_id=shot_id,
+                )
+            )
+            return True
+
+        return self._with_timeline(project_id, edit)
+
+    def scene_start(self, project_id: str, scene_id: str) -> float | None:
+        """Where the scene's first clip starts on the timeline, or None if none of its shots are placed."""
+        with self.db.session() as s:
+            shot_ids = {sh.id for sh in s.exec(select(Shot).where(Shot.scene_id == scene_id))}
+        starts = [c.start_s for c in self.load(project_id).video.clips if c.shot_id in shot_ids]
+        return min(starts) if starts else None
+
+    def place_audio(self, project_id: str, asset: Asset, track_id: str, start_s: float) -> bool:
+        """Adds `asset` to an audio track at `start_s` (e.g. generated music)."""
+
+        def edit(tl: TimelineData) -> bool:
+            track = next((t for t in tl.audio if t.id == track_id), None)
+            if track is None or not asset.duration_s:
+                return False
+            track.clips.append(Clip(asset_id=asset.id, start_s=max(0.0, start_s), out_s=asset.duration_s))
+            return True
+
+        return self._with_timeline(project_id, edit)
+
 
 def drop_asset_clips(s: Session, project_id: str, asset_id: str) -> bool:
     """Removes clips that use a deleted asset; the caller commits. Video clips after it move up when the

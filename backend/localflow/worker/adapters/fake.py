@@ -8,6 +8,7 @@ import os
 import random
 import textwrap
 import time
+from array import array
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from localflow.services.media.ffmpeg import probe, run_ffmpeg
 from localflow.worker.adapters.base import (
     GPU_JOB_TYPES,
-    Adapter,
     AdapterInfo,
     AudioResult,
     ExtendRequest,
@@ -34,6 +34,7 @@ from localflow.worker.adapters.base import (
     VideoParams,
     VideoResult,
 )
+from localflow.worker.adapters.speech import BuiltinVoice, SpeechAdapter, VoiceParams, tone
 from localflow.worker.context import JobContext
 
 
@@ -87,10 +88,29 @@ def placeholder_image(
     return img
 
 
-class FakeAdapter(Adapter):
+FAKE_VOICES: tuple[BuiltinVoice, ...] = (
+    BuiltinVoice("fake_aria", "Aria", "en-US", "female", "A", "warm, friendly, clear"),
+    BuiltinVoice("fake_ben", "Ben", "en-US", "male", "A", "calm, deep, steady"),
+    BuiltinVoice("fake_cleo", "Cleo", "en-US", "female", "B", "bright, energetic, young"),
+    BuiltinVoice("fake_dev", "Dev", "en-US", "male", "B", "relaxed, conversational"),
+    BuiltinVoice("fake_emma", "Emma", "en-GB", "female", "B", "crisp, composed, mature"),
+    BuiltinVoice("fake_finn", "Finn", "en-GB", "male", "C", "gravelly, older, gruff"),
+)
+_FAKE_PITCH = {
+    "fake_aria": 220.0,
+    "fake_ben": 110.0,
+    "fake_cleo": 260.0,
+    "fake_dev": 135.0,
+    "fake_emma": 200.0,
+    "fake_finn": 95.0,
+}
+
+
+class FakeAdapter(SpeechAdapter):
+    builtin_voices = FAKE_VOICES
     info = AdapterInfo(
         adapter_key="fake",
-        adapter_version="1.0.0",
+        adapter_version="1.1.0",
         name="Fake engine (placeholder outputs)",
         capabilities=list(GPU_JOB_TYPES),
         supported_base_models=["fake"],
@@ -99,6 +119,8 @@ class FakeAdapter(Adapter):
         supports_lora=True,
         supports_native_audio=True,
         heavy=False,
+        voices=[v.to_dict() for v in FAKE_VOICES],
+        voice_params_schema=VoiceParams.model_json_schema(),
     )
 
     def __init__(self, ffmpeg: str | None, ffprobe: str | None, default_step_delay_s: float) -> None:
@@ -316,24 +338,15 @@ class FakeAdapter(Adapter):
 
     def synthesize(self, req: TTSRequest, ctx: JobContext) -> AudioResult:
         extra = self._extra(req.extra)
-        self._simulate(ctx, extra, weight=0.8)
-        words = max(1, len(req.text.split()))
-        dur = max(0.6, words / 2.5 / req.speed)
-        freq = 140 + (ctx.seed % 120)
-        out = ctx.output_dir / "speech.wav"
-        args = [
-            "-f",
-            "lavfi",
-            "-i",
-            f"sine=frequency={freq}:sample_rate=24000:duration={dur:.3f}",
-            "-af",
-            "tremolo=f=6:d=0.8,volume=0.4",
-            "-c:a",
-            "pcm_s16le",
-            str(out),
-        ]
-        self._encode(ctx, args, dur, 0.8)
-        return AudioResult(str(out), dur, 24000, ctx.seed)
+        self._simulate(ctx, extra, weight=0.3)
+        return SpeechAdapter.synthesize(self, req, ctx)
+
+    def speak(self, text: str, voice: str, params: VoiceParams, speed: float, ctx: JobContext) -> array:
+        """~2.5 words/s, pitched by voice (and blend); the line's "pitch" follows the seed slightly."""
+        words = max(1, len(text.split()))
+        weights = params.weights(voice)
+        freq = sum(_FAKE_PITCH.get(v, 180.0) * w for v, w in weights) + ctx.seed % 7
+        return tone(max(0.6, words / 2.5 / speed), freq, self.sample_rate)
 
     def generate_v2a(self, req: V2ARequest, ctx: JobContext) -> AudioResult:
         extra = self._extra(req.extra)

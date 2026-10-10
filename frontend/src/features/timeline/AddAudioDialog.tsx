@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDuration } from "@/lib/utils";
 import { assetLabel, timecode, type Track } from "./math";
+import { MusicGenerator } from "./MusicGenerator";
 
 export function AddAudioDialog({
   track,
@@ -58,11 +59,12 @@ export function AddAudioDialog({
           ))}
           {audio.length === 0 && (
             <p className="text-muted-foreground text-sm">
-              No audio in this project yet. Upload a file below; speech and sound effects generation arrive
-              with M6.
+              No audio in this project yet. Upload a file below, or generate dialogue and sound effects in a
+              shot&apos;s Audio section (Shots board).
             </p>
           )}
         </div>
+        {track.id === "a_music" && <MusicGenerator projectId={projectId} />}
         <div className="flex items-center gap-2 border-t pt-3">
           <input
             ref={input}

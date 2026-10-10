@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input, Label, NativeSelect, Textarea } from "@/components/ui/primitives";
+import { VoicePicker } from "@/components/VoicePicker";
 import { useUi } from "@/stores/ui";
 
 function toForm(c: LibraryCharacter) {
@@ -28,6 +29,7 @@ function toForm(c: LibraryCharacter) {
     negative_prompt: c.negative_prompt,
     character_info: c.character_info,
     voice_hints: { gender: "", age: "", tone: "", ...c.voice_hints },
+    voice_id: c.voice_id ?? null,
   };
 }
 
@@ -133,6 +135,15 @@ export function LibraryCharacterDialog({
                 />
               </div>
             ))}
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="lc-voice">Voice</Label>
+            <VoicePicker
+              id="lc-voice"
+              value={form.voice_id}
+              hints={form.voice_hints}
+              onChange={(v) => setForm({ ...form, voice_id: v })}
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 rounded-lg border p-2">

@@ -8,6 +8,7 @@ import { mk, type ModelEntry } from "./models";
 import { JOBS_PAGE_SIZE, qk } from "./queries";
 import { sk } from "./story";
 import { tk } from "./timeline";
+import { vok } from "./voices";
 
 type JobPage = Schemas["Page_JobOut_"];
 
@@ -24,6 +25,7 @@ export type ServerEvent =
   | { type: "timeline.updated"; project_id: string }
   | { type: "ingredients.updated"; project_id: string }
   | { type: "library.updated"; library_character_id: string }
+  | { type: "voices.updated" }
   | { type: "model.status"; model: ModelEntry }
   | { type: "model.status"; model_entry_id: string; deleted: true }
   | {
@@ -113,11 +115,16 @@ export function handleServerEvent(qc: QueryClient, ev: ServerEvent): void {
     case "ingredients.updated":
       void qc.invalidateQueries({ queryKey: sk.ingredients(ev.project_id) });
       void qc.invalidateQueries({ queryKey: ck.referencesRoot });
+      void qc.invalidateQueries({ queryKey: ["audio-plan"] }); // speakers' voices may have changed
       break;
     case "library.updated":
       // Library edits change the "update available" badge on linked characters in every project.
       void qc.invalidateQueries({ queryKey: ck.libraryRoot });
       void qc.invalidateQueries({ queryKey: ["ingredients"] });
+      break;
+    case "voices.updated":
+      void qc.invalidateQueries({ queryKey: vok.voices }); // also refreshes voice suggestions
+      void qc.invalidateQueries({ queryKey: ["audio-plan"] });
       break;
     case "model.status": {
       if ("deleted" in ev) {
@@ -132,6 +139,7 @@ export function handleServerEvent(qc: QueryClient, ev: ServerEvent): void {
         if (m.status !== "downloading") ui.clearDownload(m.id);
       }
       void qc.invalidateQueries({ queryKey: mk.options });
+      void qc.invalidateQueries({ queryKey: vok.voices }); // a TTS model brings its voices
       break;
     }
     case "download.progress":

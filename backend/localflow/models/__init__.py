@@ -14,6 +14,7 @@ from localflow.models.tables import (
     Shot,
     Story,
     Timeline,
+    Voice,
 )
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "Shot",
     "Story",
     "Timeline",
+    "Voice",
     "new_id",
     "utcnow",
 ]

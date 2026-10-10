@@ -4417,6 +4417,696 @@
         }
       }
     },
+    "/api/voices": {
+      "get": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "List Voices",
+        "description": "Custom voices first, then built-ins by model, language and quality.",
+        "operationId": "list_voices_api_voices_get",
+        "parameters": [
+          {
+            "name": "adapter_key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Adapter Key"
+            }
+          },
+          {
+            "name": "available",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Only voices whose TTS model is installed",
+              "default": false,
+              "title": "Available"
+            },
+            "description": "Only voices whose TTS model is installed"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VoiceOut"
+                  },
+                  "title": "Response List Voices Api Voices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Create Voice",
+        "operationId": "create_voice_api_voices_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voices/suggest": {
+      "get": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Suggest Voice",
+        "description": "The best available built-in voice for a character's voice hints.",
+        "operationId": "suggest_voice_api_voices_suggest_get",
+        "parameters": [
+          {
+            "name": "gender",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Gender"
+            }
+          },
+          {
+            "name": "age",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Age"
+            }
+          },
+          {
+            "name": "tone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Tone"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "en",
+              "title": "Language"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSuggestion"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voices/design": {
+      "post": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Design Voice",
+        "description": "Suggested custom-voice params for a text description (LLM purpose `voice_design`).",
+        "operationId": "design_voice_api_voices_design_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceDesignBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceDesignOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voices/audition": {
+      "post": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Audition Voice",
+        "description": "Speaks a sample line with unsaved settings; play the job's audio asset when it completes.",
+        "operationId": "audition_voice_api_voices_audition_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuditionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voices/{voice_id}": {
+      "get": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Get Voice",
+        "operationId": "get_voice_api_voices__voice_id__get",
+        "parameters": [
+          {
+            "name": "voice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Voice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Update Voice",
+        "description": "Custom voices only. Changing the sound drops the cached preview.",
+        "operationId": "update_voice_api_voices__voice_id__patch",
+        "parameters": [
+          {
+            "name": "voice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Voice Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Delete Voice",
+        "description": "Custom voices only; characters using it go back to \"no voice\".",
+        "operationId": "delete_voice_api_voices__voice_id__delete",
+        "parameters": [
+          {
+            "name": "voice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Voice Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voices/{voice_id}/preview": {
+      "post": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Preview Voice",
+        "description": "Returns the cached sample's URL, or queues a TTS job that caches it (`voices.updated` when done).",
+        "operationId": "preview_voice_api_voices__voice_id__preview_post",
+        "parameters": [
+          {
+            "name": "voice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Voice Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/voices/{voice_id}/preview.wav": {
+      "get": {
+        "tags": [
+          "voices"
+        ],
+        "summary": "Voice Preview File",
+        "operationId": "voice_preview_file_api_voices__voice_id__preview_wav_get",
+        "parameters": [
+          {
+            "name": "voice_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Voice Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shots/{shot_id}/audio-plan": {
+      "post": {
+        "tags": [
+          "shots"
+        ],
+        "summary": "Audio Plan",
+        "description": "Who says what with which voice, whether it fits the clip, and the SFX prompt, without queuing.",
+        "operationId": "audio_plan_api_shots__shot_id__audio_plan_post",
+        "parameters": [
+          {
+            "name": "shot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShotAudioParams"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioPlanOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shots/{shot_id}/generate-audio": {
+      "post": {
+        "tags": [
+          "shots"
+        ],
+        "summary": "Generate Audio",
+        "description": "Dialogue (one clip-length TTS track) and/or SFX (video-to-audio on the selected take). Each result\nbecomes the shot's selected audio for its part.",
+        "operationId": "generate_audio_api_shots__shot_id__generate_audio_post",
+        "parameters": [
+          {
+            "name": "shot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShotAudioBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShotAudioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shots/{shot_id}/select-audio": {
+      "post": {
+        "tags": [
+          "shots"
+        ],
+        "summary": "Select Audio",
+        "description": "Makes an audio candidate the shot's dialogue or SFX (replacing the previous one of that part).",
+        "operationId": "select_audio_api_shots__shot_id__select_audio_post",
+        "parameters": [
+          {
+            "name": "shot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectAudioBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelectAudioOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/generate-music": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Generate Music",
+        "description": "Music for the film or one scene from the shots' music cues; placed on the Music track when done.",
+        "operationId": "generate_music_api_projects__project_id__generate_music_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MusicGenBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MusicGenOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/character-templates": {
       "get": {
         "tags": [
@@ -5915,6 +6605,135 @@
         "type": "object",
         "title": "AssetUpdate"
       },
+      "AudioPlanOut": {
+        "properties": {
+          "clip_s": {
+            "type": "number",
+            "title": "Clip S",
+            "description": "The length the audio is made for: the selected take, else the shot"
+          },
+          "has_take": {
+            "type": "boolean",
+            "title": "Has Take"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/DialoguePlanLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "speech_s": {
+            "type": "number",
+            "title": "Speech S",
+            "description": "Estimated dialogue length incl. lead-in and pauses"
+          },
+          "fit_speed": {
+            "type": "number",
+            "title": "Fit Speed",
+            "description": "Speed-up needed to fit the clip (1 = fits)"
+          },
+          "fits": {
+            "type": "boolean",
+            "title": "Fits",
+            "description": "Fits within max_speed"
+          },
+          "tts_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Model"
+          },
+          "sfx_prompt": {
+            "type": "string",
+            "title": "Sfx Prompt"
+          },
+          "v2a_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "V2A Model"
+          },
+          "selected": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Selected"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clip_s",
+          "has_take",
+          "lines",
+          "speech_s",
+          "fit_speed",
+          "fits",
+          "tts_model",
+          "sfx_prompt",
+          "v2a_model",
+          "selected",
+          "notes"
+        ],
+        "title": "AudioPlanOut"
+      },
+      "AuditionBody": {
+        "properties": {
+          "base_voice_id": {
+            "type": "string",
+            "title": "Base Voice Id"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "base_voice_id"
+        ],
+        "title": "AuditionBody",
+        "description": "Hear unsaved settings: a base voice plus params."
+      },
       "AutoAssembleBody": {
         "properties": {
           "scene_transition": {
@@ -7065,6 +7884,90 @@
           "line"
         ],
         "title": "DialogueLine"
+      },
+      "DialoguePlanLine": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "character_ingredient_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Character Ingredient Id"
+          },
+          "speaker": {
+            "type": "string",
+            "title": "Speaker"
+          },
+          "line": {
+            "type": "string",
+            "title": "Line"
+          },
+          "emotion": {
+            "type": "string",
+            "title": "Emotion"
+          },
+          "voice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Id"
+          },
+          "voice_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Name"
+          },
+          "voice_source": {
+            "type": "string",
+            "enum": [
+              "character",
+              "suggested",
+              "none"
+            ],
+            "title": "Voice Source"
+          },
+          "speed": {
+            "type": "number",
+            "title": "Speed"
+          },
+          "estimated_s": {
+            "type": "number",
+            "title": "Estimated S"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "character_ingredient_id",
+          "speaker",
+          "line",
+          "emotion",
+          "voice_id",
+          "voice_name",
+          "voice_source",
+          "speed",
+          "estimated_s"
+        ],
+        "title": "DialoguePlanLine"
       },
       "DraftCreate": {
         "properties": {
@@ -10738,6 +11641,131 @@
         "type": "object",
         "title": "MusicBody"
       },
+      "MusicGenBody": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "film",
+              "scene"
+            ],
+            "title": "Scope",
+            "default": "film"
+          },
+          "scene_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene Id"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt",
+            "description": "Defaults to the shots' music cues"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 600.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "model_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Entry Id"
+          },
+          "place": {
+            "type": "boolean",
+            "title": "Place",
+            "description": "Add it to the timeline's Music track when it's done",
+            "default": true
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4294967295.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MusicGenBody"
+      },
+      "MusicGenOut": {
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "duration_s": {
+            "type": "number",
+            "title": "Duration S"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job",
+          "prompt",
+          "duration_s",
+          "model_name",
+          "notes"
+        ],
+        "title": "MusicGenOut"
+      },
       "Page_AssetOut_": {
         "properties": {
           "items": {
@@ -10812,6 +11840,61 @@
           "project_id"
         ],
         "title": "PlaygroundInfo"
+      },
+      "PreviewBody": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text",
+            "description": "Defaults to a sample line"
+          },
+          "refresh": {
+            "type": "boolean",
+            "title": "Refresh",
+            "description": "Regenerate even if a sample is cached",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PreviewBody"
+      },
+      "PreviewOut": {
+        "properties": {
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Ready to play (cached sample)"
+          },
+          "job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Queued: play the job's audio asset when it completes"
+          }
+        },
+        "type": "object",
+        "title": "PreviewOut"
       },
       "PrimaryBody": {
         "properties": {
@@ -12177,6 +13260,51 @@
         ],
         "title": "SecretValue"
       },
+      "SelectAudioBody": {
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "title": "Asset Id"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "dialogue",
+                  "sfx"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot",
+            "description": "For uploaded audio: dialogue or sfx"
+          }
+        },
+        "type": "object",
+        "required": [
+          "asset_id"
+        ],
+        "title": "SelectAudioBody"
+      },
+      "SelectAudioOut": {
+        "properties": {
+          "selected_audio_asset_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Selected Audio Asset Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "selected_audio_asset_ids"
+        ],
+        "title": "SelectAudioOut"
+      },
       "SelectBody": {
         "properties": {
           "slot": {
@@ -12228,6 +13356,238 @@
           "asset_id"
         ],
         "title": "SetViewBody"
+      },
+      "ShotAudioBody": {
+        "properties": {
+          "parts": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "dialogue",
+                "sfx"
+              ]
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Parts"
+          },
+          "params": {
+            "$ref": "#/components/schemas/ShotAudioParams"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ShotAudioBody"
+      },
+      "ShotAudioOut": {
+        "properties": {
+          "clip_s": {
+            "type": "number",
+            "title": "Clip S",
+            "description": "The length the audio is made for: the selected take, else the shot"
+          },
+          "has_take": {
+            "type": "boolean",
+            "title": "Has Take"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/DialoguePlanLine"
+            },
+            "type": "array",
+            "title": "Lines"
+          },
+          "speech_s": {
+            "type": "number",
+            "title": "Speech S",
+            "description": "Estimated dialogue length incl. lead-in and pauses"
+          },
+          "fit_speed": {
+            "type": "number",
+            "title": "Fit Speed",
+            "description": "Speed-up needed to fit the clip (1 = fits)"
+          },
+          "fits": {
+            "type": "boolean",
+            "title": "Fits",
+            "description": "Fits within max_speed"
+          },
+          "tts_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Model"
+          },
+          "sfx_prompt": {
+            "type": "string",
+            "title": "Sfx Prompt"
+          },
+          "v2a_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "V2A Model"
+          },
+          "selected": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Selected"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          },
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobOut"
+            },
+            "type": "array",
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clip_s",
+          "has_take",
+          "lines",
+          "speech_s",
+          "fit_speed",
+          "fits",
+          "tts_model",
+          "sfx_prompt",
+          "v2a_model",
+          "selected",
+          "notes",
+          "jobs"
+        ],
+        "title": "ShotAudioOut"
+      },
+      "ShotAudioParams": {
+        "properties": {
+          "speed": {
+            "type": "number",
+            "maximum": 1.4,
+            "minimum": 0.7,
+            "title": "Speed",
+            "description": "Dialogue pace (on top of each voice's)",
+            "default": 1.0
+          },
+          "fit": {
+            "type": "string",
+            "enum": [
+              "speed",
+              "none"
+            ],
+            "title": "Fit",
+            "description": "speed: speed lines up (<= max_speed) to fit the clip",
+            "default": "speed"
+          },
+          "max_speed": {
+            "type": "number",
+            "maximum": 1.5,
+            "minimum": 1.0,
+            "title": "Max Speed",
+            "default": 1.15
+          },
+          "tts_model_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Model Entry Id"
+          },
+          "sfx_prompt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sfx Prompt",
+            "description": "Defaults to the shot's"
+          },
+          "sfx_negative_prompt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sfx Negative Prompt"
+          },
+          "sfx_steps": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 200.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sfx Steps"
+          },
+          "v2a_model_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "V2A Model Entry Id"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4294967295.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ShotAudioParams"
       },
       "ShotCreate": {
         "properties": {
@@ -12487,6 +13847,22 @@
               }
             ],
             "title": "Selected Video Asset Id"
+          },
+          "selected_audio_asset_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Audio Asset Ids",
+            "description": "Audio of this project placed with the shot (dialogue, SFX)"
           },
           "reference_asset_ids": {
             "anyOf": [
@@ -13084,6 +14460,22 @@
             ],
             "title": "Selected Video Asset Id"
           },
+          "selected_audio_asset_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Audio Asset Ids",
+            "description": "Audio of this project placed with the shot (dialogue, SFX)"
+          },
           "reference_asset_ids": {
             "anyOf": [
               {
@@ -13122,6 +14514,74 @@
           "reason"
         ],
         "title": "SkippedShot"
+      },
+      "SpeechLine": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "voice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Id",
+            "description": "Adapter-native voice; None = the default voice"
+          },
+          "voice_params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Voice Params",
+            "description": "Custom-voice params"
+          },
+          "speed": {
+            "type": "number",
+            "maximum": 2.0,
+            "minimum": 0.5,
+            "title": "Speed",
+            "default": 1.0
+          },
+          "start_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 600.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start S",
+            "description": "None = after the previous line"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key",
+            "description": "Caller's id for this line, echoed in the result"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SpeechLine",
+        "description": "One dialogue line in a multi-voice TTS request (Section 12.1)."
       },
       "StoryBible": {
         "properties": {
@@ -14254,8 +15714,8 @@
           "text": {
             "type": "string",
             "maxLength": 5000,
-            "minLength": 1,
-            "title": "Text"
+            "title": "Text",
+            "default": ""
           },
           "voice_id": {
             "anyOf": [
@@ -14268,12 +15728,63 @@
             ],
             "title": "Voice Id"
           },
+          "voice_params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Voice Params"
+          },
           "speed": {
             "type": "number",
             "maximum": 2.0,
             "minimum": 0.5,
             "title": "Speed",
             "default": 1.0
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/SpeechLine"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Lines"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 600.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S",
+            "description": "Dialogue: make the track this long (the clip length)"
+          },
+          "lead_s": {
+            "type": "number",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Lead S",
+            "description": "Dialogue: silence before the first line",
+            "default": 0.3
+          },
+          "gap_s": {
+            "type": "number",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Gap S",
+            "description": "Dialogue: pause between lines",
+            "default": 0.35
+          },
+          "max_speed": {
+            "type": "number",
+            "maximum": 1.5,
+            "minimum": 1.0,
+            "title": "Max Speed",
+            "description": "Dialogue: speed-up allowed to fit the lines into the clip",
+            "default": 1.15
           },
           "seed": {
             "anyOf": [
@@ -14296,9 +15807,6 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "text"
-        ],
         "title": "TTSBody"
       },
       "TemplateCreate": {
@@ -15554,6 +17062,107 @@
         ],
         "title": "ViewsOut"
       },
+      "VoiceCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "base_voice_id": {
+            "type": "string",
+            "title": "Base Voice Id",
+            "description": "A built-in voice to start from"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Description",
+            "default": ""
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params",
+            "description": "Adapter voice params (blend, speed)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "base_voice_id"
+        ],
+        "title": "VoiceCreate"
+      },
+      "VoiceDesignBody": {
+        "properties": {
+          "base_voice_id": {
+            "type": "string",
+            "title": "Base Voice Id"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "llm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LlmChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "base_voice_id",
+          "description"
+        ],
+        "title": "VoiceDesignBody"
+      },
+      "VoiceDesignOut": {
+        "properties": {
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "params",
+          "notes"
+        ],
+        "title": "VoiceDesignOut"
+      },
       "VoiceHints": {
         "properties": {
           "gender": {
@@ -15599,6 +17208,224 @@
         "additionalProperties": false,
         "type": "object",
         "title": "VoiceHintsIn"
+      },
+      "VoiceOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "builtin",
+              "custom"
+            ],
+            "title": "Kind"
+          },
+          "adapter_key": {
+            "type": "string",
+            "title": "Adapter Key"
+          },
+          "native_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Id"
+          },
+          "base_voice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Voice Id"
+          },
+          "base_voice_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Voice Name"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "language": {
+            "type": "string",
+            "title": "Language"
+          },
+          "gender": {
+            "type": "string",
+            "title": "Gender"
+          },
+          "params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Params"
+          },
+          "quality": {
+            "type": "string",
+            "title": "Quality",
+            "default": ""
+          },
+          "traits": {
+            "type": "string",
+            "title": "Traits",
+            "default": ""
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "description": "Its TTS model is installed and the worker can run it"
+          },
+          "preview_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Url",
+            "description": "Cached sample (GET, ?token= allowed)"
+          },
+          "preview_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Text"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "adapter_key",
+          "native_id",
+          "base_voice_id",
+          "name",
+          "description",
+          "language",
+          "gender",
+          "params",
+          "available",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "VoiceOut"
+      },
+      "VoiceSuggestion": {
+        "properties": {
+          "voice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VoiceOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "voice",
+          "reason"
+        ],
+        "title": "VoiceSuggestion"
+      },
+      "VoiceUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "base_voice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Voice Id"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Params"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "VoiceUpdate"
       },
       "WorkerInfo": {
         "properties": {

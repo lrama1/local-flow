@@ -7,7 +7,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, runtime_checkable
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 if TYPE_CHECKING:
     from localflow.worker.context import JobContext
@@ -106,15 +106,47 @@ class ExtendRequest(ExtendParams):
     video_path: str
 
 
+class SpeechLine(BaseModel):
+    """One dialogue line in a multi-voice TTS request (Section 12.1)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1, max_length=1000)
+    voice_id: str | None = Field(default=None, description="Adapter-native voice; None = the default voice")
+    voice_params: dict[str, Any] = Field(default_factory=dict, description="Custom-voice params")
+    speed: float = Field(default=1.0, ge=0.5, le=2.0)
+    start_s: float | None = Field(default=None, ge=0, le=600, description="None = after the previous line")
+    key: str | None = Field(default=None, description="Caller's id for this line, echoed in the result")
+
+
 class TTSRequest(BaseModel):
+    """A single `text`, or dialogue `lines` laid out on one track. `voice_id` is the adapter-native voice
+    name (the API resolves LocalFlow voice ids to native ids + params before submitting)."""
+
     model_config = ConfigDict(extra="forbid")
 
     model_entry_id: str | None = None
-    text: str = Field(min_length=1, max_length=5000)
+    text: str = Field(default="", max_length=5000)
     voice_id: str | None = None
+    voice_params: dict[str, Any] = Field(default_factory=dict)
     speed: float = Field(default=1.0, ge=0.5, le=2.0)
+    lines: list[SpeechLine] = Field(default_factory=list, max_length=50)
+    duration_s: float | None = Field(
+        default=None, gt=0, le=600, description="Dialogue: make the track this long (the clip length)"
+    )
+    lead_s: float = Field(default=0.3, ge=0, le=10, description="Dialogue: silence before the first line")
+    gap_s: float = Field(default=0.35, ge=0, le=5, description="Dialogue: pause between lines")
+    max_speed: float = Field(
+        default=1.15, ge=1.0, le=1.5, description="Dialogue: speed-up allowed to fit the lines into the clip"
+    )
     seed: int | None = Field(default=None, ge=0, le=2**32 - 1)
     extra: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _text_or_lines(self) -> TTSRequest:
+        if not self.lines and not self.text.strip():
+            raise ValueError("Give the text to speak (or dialogue lines).")
+        return self
 
 
 class V2AParams(BaseModel):
@@ -183,6 +215,7 @@ class AudioResult:
     duration_s: float
     sample_rate: int
     seed: int
+    meta: dict[str, Any] = field(default_factory=dict)  # e.g. dialogue line placement; kept on the asset
 
 
 # --- Capability interfaces (Section 10.1) ------------------------------------------------------
@@ -266,6 +299,10 @@ class AdapterInfo:
     available: bool = True
     unavailable_reason: str | None = None
     heavy: bool = True
+    # TTS (Section 12.2): built-in voices (BuiltinVoice dicts) and the custom-voice params schema.
+    voices: list[dict[str, Any]] = field(default_factory=list)
+    voice_params_schema: dict[str, Any] = field(default_factory=dict)
+    max_duration_s: float | None = None  # longest output an audio adapter makes in one go
 
     def to_dict(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in self.__dataclass_fields__}

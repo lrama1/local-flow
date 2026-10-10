@@ -32,6 +32,7 @@ from localflow.routers import (
     system,
     timeline,
     video,
+    voices,
 )
 from localflow.routers import models as models_router
 from localflow.routers import settings as settings_router
@@ -101,6 +102,7 @@ def create_app(settings: Settings | None = None, **service_hooks: Any) -> FastAP
         imagegen.router,
         video.router,
         timeline.router,
+        voices.router,
         characters.router,
         events.router,
     ):

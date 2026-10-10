@@ -254,6 +254,8 @@ class AssetService:
             }
             if job.target_ref_json:
                 generation["target_ref"] = job.target_ref_json
+            if result.get("output"):
+                generation["output"] = result["output"]  # adapter-reported details, e.g. dialogue placement
             if params.get("prompt_raw"):
                 # Section 6.2: prompts with @mentions keep both the raw and the resolved text.
                 generation["prompt_raw"] = params["prompt_raw"]

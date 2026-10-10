@@ -48,6 +48,7 @@ from localflow.services.llm.templates import render
 from localflow.services.llm.types import LLMError, StructuredResult
 from localflow.services.projects import ProjectService
 from localflow.services.registry.service import RegistryService
+from localflow.services.voices import VoiceService
 
 log = logging.getLogger("localflow.characters")
 
@@ -124,6 +125,7 @@ class CharacterService:
         llm: LLMService,
         projects: ProjectService,
         templates: TemplateService,
+        voices: VoiceService | None = None,
     ) -> None:
         self.settings = settings
         self.db = db
@@ -135,6 +137,7 @@ class CharacterService:
         self.llm = llm
         self.projects = projects
         self.templates = templates
+        self.voices = voices
 
     # --- drafts (wizard) -------------------------------------------------------------------------
     def create_draft(self, project_id: str, body: DraftCreate) -> Ingredient:
@@ -275,7 +278,7 @@ class CharacterService:
             describe_reason=describe_reason,
             edit_model=edit is not None,
             edit_model_name=edit[1] if edit else None,
-            voices=False,  # built-in and custom voices arrive with the TTS adapters (M6)
+            voices=bool(self.voices and self.voices.usable_adapters()),
         )
 
     # --- views (Section 11.7 step 2) -------------------------------------------------------------

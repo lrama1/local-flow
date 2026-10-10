@@ -55,6 +55,9 @@ def discover_adapters(config: WorkerConfig, engine: str, reason: str | None) -> 
 
         return [FakeAdapter(config.ffmpeg, config.ffprobe, config.fake_step_delay_s)]
     from localflow.worker.adapters.flux import FluxAdapter, FluxKontextAdapter
+    from localflow.worker.adapters.kokoro import KokoroAdapter
+    from localflow.worker.adapters.mmaudio import MMAudioAdapter
+    from localflow.worker.adapters.musicgen import MusicGenAdapter
     from localflow.worker.adapters.sdxl import SdxlAdapter
     from localflow.worker.adapters.wan import WanAdapter
 
@@ -63,6 +66,9 @@ def discover_adapters(config: WorkerConfig, engine: str, reason: str | None) -> 
         SdxlAdapter(config),
         FluxKontextAdapter(config),
         WanAdapter(config),
+        KokoroAdapter(config),
+        MMAudioAdapter(config),
+        MusicGenAdapter(config),
     ]
     if reason:
         for a in adapters:
@@ -231,6 +237,8 @@ class Engine:
             meta["model_name"] = spec.name
         if loras:
             meta["loras"] = [{"model_entry_id": lo.entry_id, "weight": lo.weight} for lo in loras]
+        if isinstance(result, AudioResult) and result.meta:
+            meta["output"] = result.meta
         return outputs, meta
 
     def shutdown(self) -> None:

@@ -21,6 +21,7 @@ TEMPLATE_VERSIONS: dict[str, str] = {
     "prompt_rewrite": "v1",
     "character_expand": "v1",
     "character_describe": "v1",
+    "voice_design": "v1",
 }
 _SPLIT = "---- USER ----"
 
