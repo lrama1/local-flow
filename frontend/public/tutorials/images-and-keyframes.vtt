@@ -1,0 +1,121 @@
+WEBVTT
+
+1
+00:00:00.954 --> 00:00:05.839
+In this tutorial, we'll give our story a look: reference images for its characters
+
+2
+00:00:05.839 --> 00:00:08.579
+and places, and a keyframe for the first shot.
+
+3
+00:00:09.742 --> 00:00:11.267
+Open the Ingredients tab.
+
+4
+00:00:11.267 --> 00:00:17.035
+These came from the story bible: characters, locations, props, and the overall
+
+5
+00:00:17.035 --> 00:00:17.479
+style.
+
+6
+00:00:17.479 --> 00:00:20.742
+Each card has a visual prompt that describes how it looks.
+
+7
+00:00:21.320 --> 00:00:25.770
+At the top, pick an image model, and how many candidates to make per run.
+
+8
+00:00:25.770 --> 00:00:31.270
+FLUX dev, quantized to fit a sixteen gigabyte GPU, is a great default.
+
+9
+00:00:33.044 --> 00:00:34.956
+Click Generate on a character.
+
+10
+00:00:34.956 --> 00:00:36.906
+The job runs on your own GPU.
+
+11
+00:00:36.906 --> 00:00:42.376
+You can follow its progress right on the card, with a live preview of each image as
+
+12
+00:00:42.376 --> 00:00:42.969
+it forms.
+
+13
+00:00:50.302 --> 00:00:53.714
+The first image becomes the character's primary reference.
+
+14
+00:00:53.714 --> 00:00:56.139
+If you prefer another candidate, just click it.
+
+15
+00:00:56.139 --> 00:00:58.252
+You can also upload a picture of your own.
+
+16
+00:01:00.239 --> 00:01:04.468
+Let's make a reference for the location too, so the keyframe can put the character
+
+17
+00:01:04.468 --> 00:01:05.551
+in the right setting.
+
+18
+00:01:13.716 --> 00:01:16.666
+Now open the Shots board, and click the first shot.
+
+19
+00:01:18.922 --> 00:01:23.939
+The Keyframe section lists the ingredient images it will use as references:
+
+20
+00:01:23.939 --> 00:01:27.684
+characters first, then props, then the scene's location.
+
+21
+00:01:29.288 --> 00:01:30.988
+Click Compose keyframe.
+
+22
+00:01:30.988 --> 00:01:36.542
+LocalFlow places the references side by side on a reference sheet, and FLUX Kontext
+
+23
+00:01:36.542 --> 00:01:40.088
+paints a single new frame that keeps each one's look.
+
+24
+00:01:49.282 --> 00:01:52.282
+Click the candidate to make it the shot's keyframe.
+
+25
+00:01:52.282 --> 00:01:56.869
+The shot is now marked keyframe ready, and the board shows the image.
+
+26
+00:01:57.447 --> 00:02:03.209
+For experiments outside the story, the Playground runs any installed model directly.
+
+27
+00:02:03.209 --> 00:02:08.959
+Pick a model, add LoRAs with their weights, and set a seed to reproduce a result
+
+28
+00:02:08.959 --> 00:02:09.534
+exactly.
+
+29
+00:02:11.032 --> 00:02:11.757
+That's it.
+
+30
+00:02:11.757 --> 00:02:17.620
+Every shot can now start from a consistent keyframe, ready to be turned into video.

@@ -1,0 +1,370 @@
+# LocalFlow model catalog (SPEC Section 9.2).
+#
+# Every repo id and file pattern below was verified against the Hugging Face API on 2026-10-09
+# (see docs/DECISIONS.md, M2). Sizes are approximate download sizes in GB (decimal).
+# Patterns use huggingface_hub `allow_patterns` semantics; the downloader additionally applies
+# the file policy (safetensors/gguf only unless allow_pickle_weights, never code files).
+#
+# Adapters marked with a later milestone are registered here so models can be downloaded ahead
+# of time; the GPU worker reports them as unavailable until the adapter ships.
+
+- key: flux1-dev-q8
+  name: FLUX.1 [dev] · GGUF Q8_0
+  purpose: Text-to-image (quality, 24 GB+ GPUs)
+  description: >-
+    FLUX.1 [dev] with a Q8_0 GGUF transformer (near-bf16 quality). Needs about 18 GB of VRAM while
+    denoising, so it's for 24 GB cards; on 16 GB cards it overflows (on Windows into system RAM: slow and
+    RAM-hungry) — prefer Q4_K_S there. The base repo is gated: accept the license on Hugging Face first.
+  kind: checkpoint
+  capabilities: [t2i]
+  adapter_key: flux
+  base_model: flux1
+  source_ref: black-forest-labs/FLUX.1-dev
+  license: FLUX.1 [dev] Non-Commercial License
+  license_url: https://huggingface.co/black-forest-labs/FLUX.1-dev/blob/main/LICENSE.md
+  approx_size_gb: 22.7
+  default_params: {width: 1024, height: 1024, steps: 28, guidance_scale: 3.5}
+  vram_profiles: {resident_gb: 19.5}
+  parts:
+    - role: transformer
+      repo_id: city96/FLUX.1-dev-gguf
+      allow_patterns: [flux1-dev-Q8_0.gguf]
+    - role: base
+      repo_id: black-forest-labs/FLUX.1-dev
+      allow_patterns:
+        [model_index.json, scheduler/*, text_encoder/*, text_encoder_2/*, tokenizer/*, tokenizer_2/*, vae/*, transformer/config.json]
+
+- key: flux1-dev-q4
+  name: FLUX.1 [dev] · GGUF Q4_K_S
+  purpose: Text-to-image (16 GB GPUs)
+  description: >-
+    FLUX.1 [dev] with a Q4_K_S GGUF transformer and an fp8-stored T5 encoder. On 16 GB GPUs the T5
+    encoder is loaded only to encode a new prompt (prompts are cached), so generation peaks around 12 GB of
+    VRAM and needs little system RAM; 24 GB GPUs keep everything resident. Shares the gated base components
+    with the Q8_0 entry and FLUX Kontext.
+  kind: checkpoint
+  capabilities: [t2i]
+  adapter_key: flux
+  base_model: flux1
+  source_ref: black-forest-labs/FLUX.1-dev
+  license: FLUX.1 [dev] Non-Commercial License
+  license_url: https://huggingface.co/black-forest-labs/FLUX.1-dev/blob/main/LICENSE.md
+  approx_size_gb: 16.8
+  recommended: true
+  default_params: {width: 1024, height: 1024, steps: 28, guidance_scale: 3.5}
+  vram_profiles: {resident_gb: 13.5}
+  parts:
+    - role: transformer
+      repo_id: city96/FLUX.1-dev-gguf
+      allow_patterns: [flux1-dev-Q4_K_S.gguf]
+    - role: base
+      repo_id: black-forest-labs/FLUX.1-dev
+      allow_patterns:
+        [model_index.json, scheduler/*, text_encoder/*, text_encoder_2/*, tokenizer/*, tokenizer_2/*, vae/*, transformer/config.json]
+
+- key: sdxl-base
+  name: SDXL 1.0 base (fp16)
+  purpose: Text-to-image (Civitai ecosystem)
+  description: >-
+    Stable Diffusion XL base in fp16 plus the fp16-fixed VAE. Also provides the configs used to load
+    Civitai SDXL / Pony / Illustrious single-file checkpoints and LoRAs.
+  kind: checkpoint
+  capabilities: [t2i]
+  adapter_key: sdxl
+  base_model: sdxl
+  source_ref: stabilityai/stable-diffusion-xl-base-1.0
+  license: CreativeML Open RAIL++-M
+  license_url: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md
+  approx_size_gb: 7.1
+  recommended: true
+  default_params: {width: 1024, height: 1024, steps: 30, guidance_scale: 6.0}
+  vram_profiles: {resident_gb: 9.0}
+  parts:
+    - role: base
+      repo_id: stabilityai/stable-diffusion-xl-base-1.0
+      allow_patterns:
+        - model_index.json
+        - scheduler/*
+        - text_encoder/config.json
+        - text_encoder/model.fp16.safetensors
+        - text_encoder_2/config.json
+        - text_encoder_2/model.fp16.safetensors
+        - tokenizer/*
+        - tokenizer_2/*
+        - unet/config.json
+        - unet/diffusion_pytorch_model.fp16.safetensors
+        - vae/config.json
+    - role: vae
+      repo_id: madebyollin/sdxl-vae-fp16-fix
+      allow_patterns: [config.json, diffusion_pytorch_model.safetensors]
+
+- key: flux1-kontext-dev-q4
+  name: FLUX.1 Kontext [dev] · GGUF Q4_K_M
+  purpose: Image edit / ingredient composition
+  description: >-
+    Instruction-based image editing used to compose keyframes from ingredient references. Shares the text
+    encoders and VAE with FLUX.1 [dev] (identical weights), so it adds only about 7 GB. Both base repos are
+    gated: accept the FLUX.1 [dev] and FLUX.1 Kontext [dev] licenses on Hugging Face first.
+  kind: checkpoint
+  capabilities: [image_edit]
+  adapter_key: flux_kontext
+  base_model: flux1-kontext
+  source_ref: black-forest-labs/FLUX.1-Kontext-dev
+  license: FLUX.1 [dev] Non-Commercial License
+  license_url: https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/blob/main/LICENSE.md
+  approx_size_gb: 16.9
+  recommended: true
+  default_params: {steps: 28, guidance_scale: 2.5}
+  vram_profiles: {resident_gb: 14.0}
+  parts:
+    - role: transformer
+      repo_id: QuantStack/FLUX.1-Kontext-dev-GGUF
+      allow_patterns: [flux1-kontext-dev-Q4_K_M.gguf]
+    - role: kontext
+      repo_id: black-forest-labs/FLUX.1-Kontext-dev
+      allow_patterns: [model_index.json, scheduler/*, transformer/config.json]
+    - role: base
+      repo_id: black-forest-labs/FLUX.1-dev
+      allow_patterns: [text_encoder/*, text_encoder_2/*, tokenizer/*, tokenizer_2/*, vae/*]
+
+- key: wan22-ti2v-5b
+  name: Wan 2.2 TI2V-5B · GGUF Q8_0
+  purpose: Text/image-to-video (default, 16 GB friendly)
+  description: >-
+    Wan 2.2 5B text+image-to-video at 720p / 24 fps (5-second clips). The transformer is a Q8_0 GGUF
+    (near-bf16 quality, 5.4 GB) and the UMT5 text encoder is stored in fp8 and only loaded to encode new
+    prompts, so it runs on 16 GB GPUs without CPU offload. The default video model for story breakdowns.
+  kind: checkpoint
+  capabilities: [t2v, i2v, extend]
+  adapter_key: wan
+  base_model: wan2.2-5b
+  source_ref: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  license: Apache 2.0
+  license_url: https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B-Diffusers
+  approx_size_gb: 19.7
+  recommended: true
+  default_params:
+    fps: 24
+    max_frames: 121
+    steps: 30  # ~18 s/step at 1280x704x121 on an RTX 5080 (DECISIONS M4); Wan's reference uses 50
+    guidance_scale: 5.0
+    sizes:
+      quality: {"16:9": [1280, 704], "9:16": [704, 1280], "1:1": [960, 960]}
+      balanced: {"16:9": [1280, 704], "9:16": [704, 1280], "1:1": [960, 960]}
+      low: {"16:9": [832, 480], "9:16": [480, 832], "1:1": [640, 640]}
+  render: {max_clip_seconds: 5.0, fps: 24, supported_modes: [t2v, i2v], supports_native_audio: false}
+  vram_profiles: {resident_gb: 12.5}
+  parts:
+    - role: transformer
+      repo_id: QuantStack/Wan2.2-TI2V-5B-GGUF
+      allow_patterns: [Wan2.2-TI2V-5B-Q8_0.gguf]
+    - role: base
+      repo_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+      allow_patterns: [model_index.json, scheduler/*, text_encoder/*, tokenizer/*, vae/*, transformer/config.json]
+
+- key: wan22-i2v-a14b-q4
+  name: Wan 2.2 I2V-A14B · GGUF Q4_K_M
+  purpose: Image-to-video (quality)
+  description: >-
+    Wan 2.2 14B mixture-of-experts image-to-video quantized to Q4_K_M. Its two 9.7 GB experts (high noise,
+    then low noise) take turns on the GPU, so 16 GB cards render 480p; 720p needs a 24 GB card. Much slower
+    than the 5B. Shares the text encoder with Wan 2.2 TI2V-5B.
+  kind: checkpoint
+  capabilities: [i2v, extend]
+  adapter_key: wan
+  base_model: wan2.2-a14b-i2v
+  source_ref: Wan-AI/Wan2.2-I2V-A14B-Diffusers
+  license: Apache 2.0
+  license_url: https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B-Diffusers
+  approx_size_gb: 31.2
+  default_params:
+    fps: 16
+    max_frames: 81
+    steps: 40
+    guidance_scale: 3.5
+    sizes:
+      quality: {"16:9": [1280, 720], "9:16": [720, 1280], "1:1": [960, 960]}
+      balanced: {"16:9": [832, 480], "9:16": [480, 832], "1:1": [640, 640]}
+      low: {"16:9": [832, 480], "9:16": [480, 832], "1:1": [640, 640]}
+  render: {max_clip_seconds: 5.0, fps: 16, supported_modes: [i2v], supports_native_audio: false}
+  vram_profiles: {resident_gb: 15.0}
+  parts:
+    - role: transformers
+      repo_id: QuantStack/Wan2.2-I2V-A14B-GGUF
+      allow_patterns: [HighNoise/*-Q4_K_M.gguf, LowNoise/*-Q4_K_M.gguf]
+    - role: text
+      repo_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+      allow_patterns: [text_encoder/*, tokenizer/*]
+    - role: base
+      repo_id: Wan-AI/Wan2.2-I2V-A14B-Diffusers
+      allow_patterns: [model_index.json, scheduler/*, vae/*, transformer/config.json, transformer_2/config.json]
+
+- key: wan22-t2v-a14b-q4
+  name: Wan 2.2 T2V-A14B · GGUF Q4_K_M
+  purpose: Text-to-video (quality)
+  description: >-
+    Wan 2.2 14B mixture-of-experts text-to-video quantized to Q4_K_M. Its two 9.7 GB experts take turns on
+    the GPU, so 16 GB cards render 480p; 720p needs a 24 GB card. Shares the text encoder with Wan 2.2
+    TI2V-5B.
+  kind: checkpoint
+  capabilities: [t2v]
+  adapter_key: wan
+  base_model: wan2.2-a14b-t2v
+  source_ref: Wan-AI/Wan2.2-T2V-A14B-Diffusers
+  license: Apache 2.0
+  license_url: https://huggingface.co/Wan-AI/Wan2.2-T2V-A14B-Diffusers
+  approx_size_gb: 31.2
+  default_params:
+    fps: 16
+    max_frames: 81
+    steps: 40
+    guidance_scale: 4.0
+    sizes:
+      quality: {"16:9": [1280, 720], "9:16": [720, 1280], "1:1": [960, 960]}
+      balanced: {"16:9": [832, 480], "9:16": [480, 832], "1:1": [640, 640]}
+      low: {"16:9": [832, 480], "9:16": [480, 832], "1:1": [640, 640]}
+  render: {max_clip_seconds: 5.0, fps: 16, supported_modes: [t2v], supports_native_audio: false}
+  vram_profiles: {resident_gb: 15.0}
+  parts:
+    - role: transformers
+      repo_id: QuantStack/Wan2.2-T2V-A14B-GGUF
+      allow_patterns: [HighNoise/*-Q4_K_M.gguf, LowNoise/*-Q4_K_M.gguf]
+    - role: text
+      repo_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+      allow_patterns: [text_encoder/*, tokenizer/*]
+    - role: base
+      repo_id: Wan-AI/Wan2.2-T2V-A14B-Diffusers
+      allow_patterns: [model_index.json, scheduler/*, vae/*, transformer/config.json, transformer_2/config.json]
+
+- key: wan21-flf2v-14b-q4
+  name: Wan 2.1 FLF2V-14B 720p · GGUF Q4_K_M
+  purpose: First/last-frame to video
+  description: >-
+    Wan 2.1 first-and-last-frame-to-video, quantized to Q4_K_M. 16 GB cards render 480p; 720p needs a
+    24 GB card. Uses the Wan 2.2 text encoder files: the same UMT5 weights in bf16 (verified tensor by
+    tensor), which saves the 22.7 GB fp32 copy.
+  kind: checkpoint
+  capabilities: [flf2v]
+  adapter_key: wan
+  base_model: wan2.1-flf2v-14b
+  source_ref: Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers
+  license: Apache 2.0
+  license_url: https://huggingface.co/Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers
+  approx_size_gb: 24.5
+  default_params:
+    fps: 16
+    max_frames: 81
+    steps: 40
+    guidance_scale: 5.0
+    sizes:
+      quality: {"16:9": [1280, 720], "9:16": [720, 1280], "1:1": [960, 960]}
+      balanced: {"16:9": [832, 480], "9:16": [480, 832], "1:1": [640, 640]}
+      low: {"16:9": [832, 480], "9:16": [480, 832], "1:1": [640, 640]}
+  render: {max_clip_seconds: 5.0, fps: 16, supported_modes: [flf2v], supports_native_audio: false}
+  vram_profiles: {resident_gb: 15.0}
+  parts:
+    - role: transformer
+      repo_id: city96/Wan2.1-FLF2V-14B-720P-gguf
+      allow_patterns: [wan2.1-flf2v-14b-720p-Q4_K_M.gguf]
+    - role: text
+      repo_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+      allow_patterns: [text_encoder/*, tokenizer/*]
+    - role: base
+      repo_id: Wan-AI/Wan2.1-FLF2V-14B-720P-diffusers
+      allow_patterns:
+        [model_index.json, scheduler/*, vae/*, image_encoder/*, image_processor/*, transformer/config.json]
+
+- key: wan21-vace-1.3b
+  name: Wan 2.1 VACE 1.3B
+  purpose: Reference-to-video (later milestone)
+  description: Wan VACE all-in-one video creation/editing with reference images. Small 1.3B variant.
+  kind: checkpoint
+  capabilities: [ref2v]
+  adapter_key: wan_vace
+  base_model: wan2.1-vace-1.3b
+  source_ref: Wan-AI/Wan2.1-VACE-1.3B-diffusers
+  license: Apache 2.0
+  license_url: https://huggingface.co/Wan-AI/Wan2.1-VACE-1.3B-diffusers
+  approx_size_gb: 19.0
+  experimental: true
+  default_params: {width: 832, height: 480, frames: 81, fps: 16}
+  parts:
+    - role: base
+      repo_id: Wan-AI/Wan2.1-VACE-1.3B-diffusers
+      allow_patterns: [model_index.json, scheduler/*, text_encoder/*, tokenizer/*, transformer/*, vae/*]
+
+- key: kokoro-82m
+  name: Kokoro-82M
+  purpose: Text-to-speech
+  description: Fast, small multi-voice TTS. Its weights are only published as PyTorch pickles.
+  kind: audio
+  capabilities: [tts]
+  adapter_key: kokoro
+  base_model: kokoro
+  source_ref: hexgrad/Kokoro-82M
+  license: Apache 2.0
+  license_url: https://huggingface.co/hexgrad/Kokoro-82M
+  approx_size_gb: 0.36
+  recommended: true
+  requires_pickle: true
+  notes: Requires allow_pickle_weights = true; loaded with torch.load(weights_only=True).
+  parts:
+    - role: base
+      repo_id: hexgrad/Kokoro-82M
+      allow_patterns: [config.json, kokoro-v1_0.pth, voices/*.pt]
+
+- key: mmaudio-large-44k-v2
+  name: MMAudio large 44.1 kHz v2
+  purpose: Video-to-audio SFX
+  description: Generates synchronized sound effects for a video clip. Weights are PyTorch pickles.
+  kind: audio
+  capabilities: [v2a]
+  adapter_key: mmaudio
+  base_model: mmaudio
+  source_ref: hkchengrex/MMAudio
+  license: CC BY-NC 4.0 (weights)
+  license_url: https://huggingface.co/hkchengrex/MMAudio
+  approx_size_gb: 6.3
+  requires_pickle: true
+  notes: >-
+    Requires allow_pickle_weights = true. The mmaudio package fetches its CLIP and BigVGAN helpers on
+    first use (M6).
+  parts:
+    - role: base
+      repo_id: hkchengrex/MMAudio
+      allow_patterns:
+        [weights/mmaudio_large_44k_v2.pth, ext_weights/synchformer_state_dict.pth, ext_weights/v1-44.pth]
+
+- key: ace-step-v1-3.5b
+  name: ACE-Step v1 3.5B
+  purpose: Music
+  description: Text-to-music with lyrics support.
+  kind: audio
+  capabilities: [music]
+  adapter_key: ace_step
+  base_model: ace-step
+  source_ref: ACE-Step/ACE-Step-v1-3.5B
+  license: Apache 2.0
+  license_url: https://huggingface.co/ACE-Step/ACE-Step-v1-3.5B
+  approx_size_gb: 8.3
+  parts:
+    - role: base
+      repo_id: ACE-Step/ACE-Step-v1-3.5B
+      allow_patterns: ["*.json", "*.safetensors"]
+
+- key: musicgen-small
+  name: MusicGen small
+  purpose: Music (small)
+  description: Meta's small text-to-music model (32 kHz mono).
+  kind: audio
+  capabilities: [music]
+  adapter_key: musicgen
+  base_model: musicgen
+  source_ref: facebook/musicgen-small
+  license: CC BY-NC 4.0
+  license_url: https://huggingface.co/facebook/musicgen-small
+  approx_size_gb: 2.4
+  parts:
+    - role: base
+      repo_id: facebook/musicgen-small
+      allow_patterns: ["*.json", spiece.model, model.safetensors]

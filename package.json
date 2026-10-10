@@ -1,0 +1,18 @@
+{
+  "name": "localflow",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A locally-running AI filmmaking studio inspired by Google Flow.",
+  "scripts": {
+    "setup": "cd backend && uv sync && cd ../frontend && npm install",
+    "dev": "node scripts/dev.mjs",
+    "start": "npm --prefix frontend run build && cd backend && uv run localflow serve",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && uv run pytest",
+    "test:frontend": "npm --prefix frontend test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy",
+    "lint:frontend": "npm --prefix frontend run lint && npm --prefix frontend run typecheck",
+    "typegen": "cd backend && uv run localflow openapi -o ../frontend/src/api/openapi.json && cd ../frontend && npm run typegen"
+  }
+}

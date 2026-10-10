@@ -1,0 +1,186 @@
+# Built-in character templates (Section 11.7.1). Loaded with yaml.safe_load; read-only in the app.
+# Thumbnails: thumbnails/<key>.jpg (generated with scripts/characters/make_template_thumbnails.py).
+# visual_prompt describes appearance only (no actions); the project's style is added at generation time.
+
+- key: weathered-fisherman
+  name: Weathered fisherman
+  category: realistic
+  visual_prompt: >-
+    A man in his late sixties with a deeply tanned, weather-lined face, a short white beard, bushy grey
+    eyebrows and pale blue eyes; broad shoulders and a sturdy build; a dark green knit fisherman's beanie
+  body_outfit_prompt: >-
+    a cream cable-knit wool sweater, a faded yellow oilskin jacket left open, dark canvas trousers and
+    black rubber boots
+  negative_prompt: young, clean-shaven, suit
+  character_info: >-
+    Quiet and patient, speaks in short sentences. Wry sense of humor that surfaces at unexpected moments.
+    Rubs his thumb over an old brass compass when thinking. Lost his boat years ago and never talks about it.
+  voice_hints: {gender: male, age: elderly, tone: "low, gravelly and slow"}
+
+- key: city-professional
+  name: City professional
+  category: realistic
+  visual_prompt: >-
+    A woman in her early thirties with warm brown skin, high cheekbones, dark brown eyes and shoulder-length
+    black hair in loose curls; small gold hoop earrings; slim build
+  body_outfit_prompt: >-
+    a tailored charcoal blazer over a white silk blouse, slim black trousers and low brown leather heels,
+    a slim silver wristwatch
+  negative_prompt: casual, messy hair
+  character_info: >-
+    Sharp, organized and quick to decide. Talks fast when excited and taps her pen against her lip while
+    listening. Hides a soft spot for stray animals behind a no-nonsense attitude.
+  voice_hints: {gender: female, age: 30s, tone: "clear, confident and brisk"}
+
+- key: elven-ranger
+  name: Elven ranger
+  category: fantastical
+  visual_prompt: >-
+    An elf woman of ageless appearance with pale olive skin, long pointed ears, sharp green eyes, and long
+    silver-blonde hair in a single side braid threaded with small wooden beads; a thin scar across the left
+    eyebrow
+  body_outfit_prompt: >-
+    a hooded forest-green cloak over fitted brown leather armor, a quiver of arrows on her back, a longbow,
+    soft knee-high boots
+  negative_prompt: modern clothing, round ears
+  character_info: >-
+    Watchful and economical with words; trusts the forest more than people. Hums old songs under her
+    breath when she thinks no one is listening. Fiercely loyal once trust is earned.
+  voice_hints: {gender: female, age: ageless adult, tone: "soft, calm and precise"}
+
+- key: old-wizard
+  name: Old wizard
+  category: fantastical
+  visual_prompt: >-
+    A tall, thin old man with a long white beard reaching his chest, bright mischievous grey eyes behind
+    round brass spectacles, a hooked nose and wild white eyebrows; a weathered pointed hat in deep midnight
+    blue
+  body_outfit_prompt: >-
+    flowing midnight-blue robes embroidered with faded silver stars, a rope belt hung with small pouches, a
+    gnarled oak staff with a glowing crystal
+  negative_prompt: young, clean-shaven, modern clothing
+  character_info: >-
+    Absent-minded but brilliant; answers questions with riddles and laughs at his own jokes. Loses his
+    spectacles constantly, usually on his own head. Kind, but tests people before helping them.
+  voice_hints: {gender: male, age: very old, tone: "warm, theatrical and slightly creaky"}
+
+- key: starship-engineer
+  name: Starship engineer
+  category: sci-fi
+  visual_prompt: >-
+    A woman in her late twenties with light brown skin, a buzzed undercut on one side and a short teal
+    asymmetric fringe, hazel eyes, a smudge of grease on one cheek and a small cybernetic port behind her
+    right ear
+  body_outfit_prompt: >-
+    an orange flight-engineer jumpsuit with the sleeves tied at the waist, a fitted grey tank top, a tool
+    belt full of glowing gadgets, scuffed magnetic boots
+  negative_prompt: dress, long hair
+  character_info: >-
+    Cheerful, restless and always fixing something. Names every machine she works on. Swears creatively in
+    three languages when things break, then apologizes to the machine.
+  voice_hints: {gender: female, age: late 20s, tone: "upbeat, quick and a little husky"}
+
+- key: android-companion
+  name: Android companion
+  category: sci-fi
+  visual_prompt: >-
+    A humanoid android with a smooth porcelain-white synthetic face, softly glowing pale blue eyes, a calm
+    neutral expression, and visible seams along the jaw and neck revealing faint blue light; short sculpted
+    silver hair
+  body_outfit_prompt: >-
+    a sleek white and graphite segmented body shell with soft blue light lines along the arms and torso, a
+    simple high-collared grey jacket
+  negative_prompt: rusty, menacing, red eyes
+  character_info: >-
+    Polite, literal and endlessly curious about human customs. Tilts its head when it doesn't understand.
+    Slowly learning humor, and proud of every joke it gets.
+  voice_hints: {gender: neutral, age: ageless, tone: "smooth, even and gentle"}
+
+- key: victorian-detective
+  name: Victorian detective
+  category: historical
+  visual_prompt: >-
+    A woman in her forties with pale skin, a sharp angular face, keen grey eyes, and auburn hair pinned up
+    in a neat Victorian bun; a small cameo brooch at the throat
+  body_outfit_prompt: >-
+    a high-collared dark burgundy Victorian dress with a fitted bodice, a short black wool cape, black
+    leather gloves, and a brass magnifying glass on a chain
+  negative_prompt: modern clothing, loose hair
+  character_info: >-
+    Brilliant, impatient and blunt; notices everything and says too much of it. Drums her fingers when
+    bored. Secretly writes sentimental poetry.
+  voice_hints: {gender: female, age: 40s, tone: "crisp, precise and dry"}
+
+- key: wandering-samurai
+  name: Wandering samurai
+  category: historical
+  visual_prompt: >-
+    A Japanese man in his thirties with a lean, serious face, dark eyes, a faint scar on his chin, and long
+    black hair tied in a topknot with a few loose strands
+  body_outfit_prompt: >-
+    a faded indigo kimono with a grey hakama, straw sandals, and a katana with a worn black wrapped hilt at
+    his left hip
+  negative_prompt: armor, modern clothing
+  character_info: >-
+    Reserved and honorable; speaks rarely and chooses words carefully. Practices calligraphy to calm
+    himself. Carries a debt he has sworn to repay.
+  voice_hints: {gender: male, age: 30s, tone: "deep, measured and quiet"}
+
+- key: anime-heroine
+  name: Anime heroine
+  category: anime
+  visual_prompt: >-
+    An anime-style teenage girl with large bright amber eyes, a cheerful round face, and long pink hair in
+    high twin tails tied with blue ribbons; drawn in clean cel-shaded anime style
+  body_outfit_prompt: >-
+    a navy and white sailor-style school uniform with a red neckerchief, a pleated navy skirt, white knee
+    socks and brown loafers
+  negative_prompt: photorealistic, 3d render
+  character_info: >-
+    Energetic, optimistic and stubborn; never gives up on a friend. Talks to herself when nervous and
+    makes dramatic declarations at the worst moments.
+  voice_hints: {gender: female, age: teen, tone: "bright, high and energetic"}
+
+- key: cartoon-inventor
+  name: Cartoon inventor
+  category: cartoon
+  visual_prompt: >-
+    A cartoon boy around ten years old with a big round head, huge expressive eyes behind oversized round
+    goggles pushed up on his forehead, a gap-toothed grin, freckles and spiky orange hair; simple bold
+    outlines and flat bright colors
+  body_outfit_prompt: >-
+    a white lab coat that is far too big for him with rolled-up sleeves, a green t-shirt, brown shorts and
+    red sneakers
+  negative_prompt: photorealistic, adult
+  character_info: >-
+    Brilliant, impatient and overconfident; every invention almost works. Explains things far too fast.
+    Keeps a notebook full of doodles of future gadgets.
+  voice_hints: {gender: male, age: child, tone: "fast, squeaky and excited"}
+
+- key: forest-troll
+  name: Gentle forest troll
+  category: creature
+  visual_prompt: >-
+    A huge gentle forest troll with mossy green-grey skin, a broad flat nose, small kind amber eyes under a
+    heavy brow, large tusks, long shaggy brown hair with leaves and twigs in it, and tiny mushrooms growing
+    on his shoulders
+  body_outfit_prompt: >-
+    a simple patched burlap tunic tied with a vine belt, bare enormous feet, a wooden walking staff made
+    from a small tree
+  negative_prompt: scary, aggressive, blood
+  character_info: >-
+    Slow, kind and easily embarrassed. Collects shiny pebbles and gives them as gifts. Afraid of mice.
+  voice_hints: {gender: male, age: ancient, tone: "very deep, slow and rumbling"}
+
+- key: clever-fox
+  name: Clever fox
+  category: animal
+  visual_prompt: >-
+    A sleek red fox with bright orange fur, a white chest and muzzle, black-tipped ears and legs, sharp
+    intelligent golden eyes, and a big bushy tail with a white tip
+  body_outfit_prompt: a small faded blue neckerchief tied loosely around the neck
+  negative_prompt: cartoon, anthropomorphic clothing
+  character_info: >-
+    Curious, sly and playful; always one step ahead. Tilts its head when it hears something interesting and
+    can't resist anything shiny.
+  voice_hints: {gender: neutral, age: young adult, tone: "light, quick and sly"}

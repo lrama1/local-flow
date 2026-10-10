@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "tutorials": [
+    {
+      "id": "story-to-shots",
+      "title": "From story idea to shot list",
+      "summary": "Create a project, turn a few sentences into a refined story and a story bible with your LLM, and break it into scenes and shots on the Shots board.",
+      "duration_s": 163.6,
+      "video": "/tutorials/story-to-shots.mp4",
+      "poster": "/tutorials/story-to-shots.jpg",
+      "captions": "/tutorials/story-to-shots.vtt",
+      "chapters": [
+        {
+          "time_s": 0.9,
+          "title": "Introduction"
+        },
+        {
+          "time_s": 10.6,
+          "title": "Create a project"
+        },
+        {
+          "time_s": 20.7,
+          "title": "Write the idea"
+        },
+        {
+          "time_s": 36.5,
+          "title": "Refine the story"
+        },
+        {
+          "time_s": 64.6,
+          "title": "Build the story bible"
+        },
+        {
+          "time_s": 92.4,
+          "title": "Break down into shots"
+        },
+        {
+          "time_s": 113.3,
+          "title": "The Shots board"
+        },
+        {
+          "time_s": 125.3,
+          "title": "Edit a shot"
+        },
+        {
+          "time_s": 153.3,
+          "title": "Next steps"
+        }
+      ],
+      "voice": "en-US-AndrewMultilingualNeural",
+      "generated_at": "2026-10-10T01:54:11+00:00"
+    },
+    {
+      "id": "images-and-keyframes",
+      "title": "Reference images and keyframes",
+      "summary": "Generate consistent reference images for characters and locations on your GPU, then compose a shot's keyframe from them with FLUX Kontext.",
+      "duration_s": 138.9,
+      "video": "/tutorials/images-and-keyframes.mp4",
+      "poster": "/tutorials/images-and-keyframes.jpg",
+      "captions": "/tutorials/images-and-keyframes.vtt",
+      "chapters": [
+        {
+          "time_s": 0.9,
+          "title": "Introduction"
+        },
+        {
+          "time_s": 9.1,
+          "title": "Ingredients"
+        },
+        {
+          "time_s": 21.3,
+          "title": "Pick a model"
+        },
+        {
+          "time_s": 31.8,
+          "title": "Generate a character"
+        },
+        {
+          "time_s": 50.3,
+          "title": "Choose the primary"
+        },
+        {
+          "time_s": 58.8,
+          "title": "A location reference"
+        },
+        {
+          "time_s": 73.7,
+          "title": "Compose a keyframe"
+        },
+        {
+          "time_s": 109.2,
+          "title": "Select the keyframe"
+        },
+        {
+          "time_s": 117.4,
+          "title": "The Playground"
+        },
+        {
+          "time_s": 130.1,
+          "title": "Wrap-up"
+        }
+      ],
+      "voice": "en-US-AndrewMultilingualNeural",
+      "generated_at": "2026-10-10T02:03:07+00:00"
+    }
+  ]
+}
