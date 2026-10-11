@@ -25,6 +25,11 @@ FFPROBE = shutil.which("ffprobe")
 needs_ffmpeg = pytest.mark.skipif(not (FFMPEG and FFPROBE), reason="ffmpeg not installed")
 
 
+def track(tl: dict[str, Any], track_id: str) -> list[dict[str, Any]]:
+    """The clips of a track of a timeline JSON, by track id (positions shift when tracks are added)."""
+    return next(t for t in tl["tracks"] if t["id"] == track_id)["clips"]  # type: ignore[no-any-return]
+
+
 def timeline(*video: Clip, audio: list[Clip] | None = None) -> TimelineData:
     tl = default_timeline("16:9", 24)
     tl.video.clips = list(video)
@@ -64,6 +69,7 @@ def test_sizes() -> None:
     tl = default_timeline("16:9", 24)
     assert [(t.id, t.kind) for t in tl.tracks] == [
         ("v1", "video"),
+        ("a_narration", "audio"),
         ("a_dialogue", "audio"),
         ("a_sfx", "audio"),
         ("a_music", "audio"),
@@ -129,7 +135,7 @@ def test_timeline_validation() -> None:
         TimelineData(tracks=[])
     tl = default_timeline("16:9", 24).model_dump()
     tl["tracks"].append({"id": "a4", "kind": "audio"})
-    with pytest.raises(ValueError, match="at most 3 audio tracks"):
+    with pytest.raises(ValueError, match="at most 4 audio tracks"):
         TimelineData.model_validate(tl)
     with pytest.raises(ValueError, match="out_s must be after in_s"):
         Clip(asset_id="A", in_s=2, out_s=1)
@@ -363,13 +369,13 @@ def test_audio_clips_and_asset_deletion(c: TestClient) -> None:
     )
     voice = speech["result"]["asset_ids"][0]
     timeline = tl["timeline"]
-    timeline["tracks"][1]["clips"] = [{"asset_id": voice, "start_s": 1.0, "out_s": 60, "gain_db": -3}]
+    timeline["tracks"][2]["clips"] = [{"asset_id": voice, "start_s": 1.0, "out_s": 60, "gain_db": -3}]
     saved = ok(c, "PUT", f"/api/projects/{pid}/timeline", json=timeline)
-    dialogue = saved["timeline"]["tracks"][1]["clips"][0]
+    dialogue = saved["timeline"]["tracks"][2]["clips"][0]
     assert dialogue["out_s"] < 60 and any("trimmed" in n for n in saved["notes"])
     # A video on an audio track is refused.
     bad = json.loads(json.dumps(timeline))
-    bad["tracks"][2]["clips"] = [{"asset_id": p["takes"][0]["id"], "out_s": 1}]
+    bad["tracks"][3]["clips"] = [{"asset_id": p["takes"][0]["id"], "out_s": 1}]
     assert c.put(f"/api/projects/{pid}/timeline", json=bad).json()["error"]["code"] == "invalid_asset"
 
     # Deleting the second take removes its clip; the clips after it move up.
@@ -379,7 +385,7 @@ def test_audio_clips_and_asset_deletion(c: TestClient) -> None:
     assert len(clips) == 5 and clips[1]["asset_id"] == p["takes"][2]["id"]
     assert clips[1]["start_s"] == pytest.approx(2.0)
     assert after["duration_s"] == pytest.approx((288 - 36) / 24)
-    assert after["timeline"]["tracks"][1]["clips"][0]["asset_id"] == voice
+    assert after["timeline"]["tracks"][2]["clips"][0]["asset_id"] == voice
 
 
 def test_export_cancel(c: TestClient) -> None:

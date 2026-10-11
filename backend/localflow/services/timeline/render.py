@@ -11,7 +11,11 @@ Audio:
 - Every audio clip and, unless the video track is muted, each video clip's own sound is trimmed,
   converted to 48 kHz stereo, set to its clip + track gain, and delayed to its start.
 - These are mixed over silence of exactly the video's length, so the output always has an AAC track that
-  ends with the picture. `loudnorm` (EBU R128, -16 LUFS) is optional."""
+  ends with the picture. `loudnorm` (EBU R128, -16 LUFS) is optional.
+- Ducking (Section 12.3): when the Narration track has clips and `duck` is on, the music, the sound
+  effects and the video clips' own sound are mixed into a bus that a sidechain compressor, keyed by the
+  narration, pulls down while it speaks. The narration and dialogue aren't ducked. Without narration, or
+  with `duck` off, the mix is the plain one."""
 
 from __future__ import annotations
 
@@ -20,10 +24,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from localflow.schemas.timeline import TimelineData
-from localflow.services.timeline.model import clip_frames, frames, preset_size
+from localflow.services.timeline.model import NARRATION_TRACK, clip_frames, frames, preset_size
 
 SAMPLE_RATE = 48_000
 _ASPECT_TOLERANCE = 0.03
+_BACKING_TRACKS = ("a_sfx", "a_music")  # ducked under the narration, with the video clips' own sound
+# About 8 dB of reduction on typical speech; it recovers over 0.4 s so music doesn't pump.
+DUCK_FILTER = "sidechaincompress=threshold=0.03:ratio=5:attack=20:release=400:makeup=1"
 
 
 @dataclass(frozen=True)
@@ -83,6 +90,7 @@ def build_export(
     dst: Path,
     *,
     loudnorm: bool = False,
+    duck: bool = False,
 ) -> ExportPlan:
     """`timeline` must be normalized; `sources` maps asset id → its file."""
     fps = timeline.fps
@@ -131,7 +139,9 @@ def build_export(
     seconds = total / fps
 
     # --- audio ------------------------------------------------------------------------------------
-    parts: list[str] = []
+    parts: list[str] = []  # every labelled stream, in mix order
+    narration: list[str] = []
+    backing: list[str] = []  # what ducks under the narration
     if not video.muted:
         for c in video.clips:
             src = sources[c.asset_id]
@@ -140,6 +150,7 @@ def build_export(
                 chain = _audio_chain(inputs[c.id], c.in_s, c.out_s, c.start_s, c.gain_db + video.gain_db)
                 graph.append(chain + label)
                 parts.append(label)
+                backing.append(label)
     for track in timeline.audio:
         if track.muted:
             continue
@@ -150,14 +161,36 @@ def build_export(
             label = f"[ta{len(parts)}]"
             graph.append(_audio_chain(k_in, c.in_s, c.out_s, c.start_s, c.gain_db + track.gain_db) + label)
             parts.append(label)
-    graph.append(
+            if track.id == NARRATION_TRACK:
+                narration.append(label)
+            elif track.id in _BACKING_TRACKS:
+                backing.append(label)
+    silence = (
         f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=duration={seconds:.6f},"
-        f"aformat=sample_fmts=fltp:sample_rates={SAMPLE_RATE}:channel_layouts=stereo[abase]"
+        f"aformat=sample_fmts=fltp:sample_rates={SAMPLE_RATE}:channel_layouts=stereo"
     )
-    mixed = "[abase]"
-    if parts:
+    graph.append(f"{silence}[abase]")
+    mix = parts
+    if duck and narration and backing:
+        # The narration bus runs the whole length (over silence) so the sidechain never ends early.
+        graph.append(f"{silence}[nbase]")
         graph.append(
-            f"[abase]{''.join(parts)}amix=inputs={len(parts) + 1}:duration=first:dropout_transition=0:"
+            f"[nbase]{''.join(narration)}amix=inputs={len(narration) + 1}:duration=first:"
+            "dropout_transition=0:normalize=0,asplit=2[nmix][nkey]"
+        )
+        if len(backing) == 1:
+            graph.append(f"{backing[0]}anull[bbus]")
+        else:
+            graph.append(
+                f"{''.join(backing)}amix=inputs={len(backing)}:dropout_transition=0:normalize=0[bbus]"
+            )
+        graph.append(f"[bbus][nkey]{DUCK_FILTER}[bduck]")
+        taken = set(narration) | set(backing)
+        mix = [p for p in parts if p not in taken] + ["[nmix]", "[bduck]"]
+    mixed = "[abase]"
+    if mix:
+        graph.append(
+            f"[abase]{''.join(mix)}amix=inputs={len(mix) + 1}:duration=first:dropout_transition=0:"
             "normalize=0[amix]"
         )
         mixed = "[amix]"

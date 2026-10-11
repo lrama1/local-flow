@@ -16,6 +16,7 @@ const PURPOSE_LABELS: Record<string, string> = {
   character_describe: "Describe a photo",
   voice_design: "Voice design",
   vision_review: "Consistency check",
+  narration: "Narration",
 };
 
 function DefaultRow({

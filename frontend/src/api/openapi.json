@@ -5898,6 +5898,222 @@
         }
       }
     },
+    "/api/projects/{project_id}/narration": {
+      "get": {
+        "tags": [
+          "narration"
+        ],
+        "summary": "Narration Plan",
+        "description": "One row per shot: its line, voiced status, where it starts and whether it overruns the next line.",
+        "operationId": "narration_plan_api_projects__project_id__narration_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "speed",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "default": 1.0,
+              "title": "Speed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NarrationPlanOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/narration/write": {
+      "post": {
+        "tags": [
+          "narration"
+        ],
+        "summary": "Write Narration",
+        "description": "The LLM writes a line per shot (only shots without narration unless `overwrite`).",
+        "operationId": "write_narration_api_projects__project_id__narration_write_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NarrationWriteBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NarrationWriteOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/narration/generate": {
+      "post": {
+        "tags": [
+          "narration"
+        ],
+        "summary": "Generate Narration",
+        "description": "Voices the lines with the narrator voice: one TTS job per shot; each take lands on the timeline.",
+        "operationId": "generate_narration_api_projects__project_id__narration_generate_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NarrationGenerateBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NarrationGenerateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/narration/resync": {
+      "post": {
+        "tags": [
+          "narration"
+        ],
+        "summary": "Resync Narration",
+        "description": "Moves every narration clip back to its shot's clip start (plus the lead).",
+        "operationId": "resync_narration_api_projects__project_id__narration_resync_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/character-templates": {
       "get": {
         "tags": [
@@ -9267,6 +9483,12 @@
             "title": "Loudnorm",
             "description": "EBU R128 loudness normalization (-16 LUFS)",
             "default": false
+          },
+          "duck": {
+            "type": "boolean",
+            "title": "Duck",
+            "description": "Lower music and effects under the narration (when it has clips)",
+            "default": true
           }
         },
         "additionalProperties": false,
@@ -13056,6 +13278,420 @@
         ],
         "title": "MusicGenOut"
       },
+      "NarratedLine": {
+        "properties": {
+          "shot_id": {
+            "type": "string",
+            "title": "Shot Id"
+          },
+          "number": {
+            "type": "string",
+            "title": "Number"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "words": {
+            "type": "integer",
+            "title": "Words"
+          },
+          "budget_words": {
+            "type": "integer",
+            "title": "Budget Words"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shot_id",
+          "number",
+          "text",
+          "words",
+          "budget_words"
+        ],
+        "title": "NarratedLine"
+      },
+      "NarrationGenerateBody": {
+        "properties": {
+          "shot_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shot Ids",
+            "description": "Only these shots; default all"
+          },
+          "only_missing": {
+            "type": "boolean",
+            "title": "Only Missing",
+            "description": "Skip lines that are already voiced and up to date",
+            "default": true
+          },
+          "speed": {
+            "type": "number",
+            "maximum": 1.2,
+            "minimum": 0.8,
+            "title": "Speed",
+            "description": "Narration pace",
+            "default": 1.0
+          },
+          "tts_model_entry_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Model Entry Id"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4294967295.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "NarrationGenerateBody"
+      },
+      "NarrationGenerateOut": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobOut"
+            },
+            "type": "array",
+            "title": "Jobs"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedLine"
+            },
+            "type": "array",
+            "title": "Skipped"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/NarrationPlanOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobs",
+          "skipped",
+          "plan"
+        ],
+        "title": "NarrationGenerateOut"
+      },
+      "NarrationPlanOut": {
+        "properties": {
+          "narrator": {
+            "$ref": "#/components/schemas/NarratorOut"
+          },
+          "tts_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Model"
+          },
+          "speed": {
+            "type": "number",
+            "title": "Speed"
+          },
+          "shots": {
+            "items": {
+              "$ref": "#/components/schemas/NarrationShotOut"
+            },
+            "type": "array",
+            "title": "Shots"
+          },
+          "total_words": {
+            "type": "integer",
+            "title": "Total Words"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "narrator",
+          "tts_model",
+          "speed",
+          "shots",
+          "total_words",
+          "notes"
+        ],
+        "title": "NarrationPlanOut"
+      },
+      "NarrationShotOut": {
+        "properties": {
+          "shot_id": {
+            "type": "string",
+            "title": "Shot Id"
+          },
+          "number": {
+            "type": "string",
+            "title": "Number",
+            "description": "Scene.shot, e.g. 2.1"
+          },
+          "scene_title": {
+            "type": "string",
+            "title": "Scene Title"
+          },
+          "duration_s": {
+            "type": "number",
+            "title": "Duration S"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "words": {
+            "type": "integer",
+            "title": "Words"
+          },
+          "budget_words": {
+            "type": "integer",
+            "title": "Budget Words"
+          },
+          "estimated_s": {
+            "type": "number",
+            "title": "Estimated S"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "empty",
+              "text",
+              "voiced",
+              "stale"
+            ],
+            "title": "Status"
+          },
+          "selected_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Asset Id"
+          },
+          "asset_duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Duration S"
+          },
+          "clip_start_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clip Start S",
+            "description": "Where the shot's clip starts on the timeline"
+          },
+          "start_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start S",
+            "description": "Where its narration starts (or would)"
+          },
+          "overflow_s": {
+            "type": "number",
+            "title": "Overflow S",
+            "description": "How far the line runs into the next narrated shot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shot_id",
+          "number",
+          "scene_title",
+          "duration_s",
+          "text",
+          "words",
+          "budget_words",
+          "estimated_s",
+          "status",
+          "selected_asset_id",
+          "asset_duration_s",
+          "clip_start_s",
+          "start_s",
+          "overflow_s"
+        ],
+        "title": "NarrationShotOut"
+      },
+      "NarrationWriteBody": {
+        "properties": {
+          "overwrite": {
+            "type": "boolean",
+            "title": "Overwrite",
+            "description": "Rewrite shots that already have narration",
+            "default": false
+          },
+          "style": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Style",
+            "description": "Perspective and tone, e.g. a hushed storybook"
+          },
+          "shot_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shot Ids",
+            "description": "Only these shots; default all"
+          },
+          "llm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LlmChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "NarrationWriteBody"
+      },
+      "NarrationWriteOut": {
+        "properties": {
+          "updated": {
+            "items": {
+              "$ref": "#/components/schemas/NarratedLine"
+            },
+            "type": "array",
+            "title": "Updated"
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped",
+            "description": "Shots left alone (already narrated, or not asked for)"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageOut"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "updated",
+          "skipped",
+          "usage",
+          "warnings"
+        ],
+        "title": "NarrationWriteOut"
+      },
+      "NarratorOut": {
+        "properties": {
+          "voice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Id"
+          },
+          "voice_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voice Name"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "project",
+              "suggested",
+              "none"
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "voice_id",
+          "voice_name",
+          "source"
+        ],
+        "title": "NarratorOut"
+      },
       "Page_AssetOut_": {
         "properties": {
           "items": {
@@ -13264,6 +13900,17 @@
             "title": "Draft Mode",
             "default": false
           },
+          "narrator_voice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrator Voice Id"
+          },
           "style_notes": {
             "type": "string",
             "title": "Style Notes",
@@ -13325,6 +13972,17 @@
             "type": "boolean",
             "title": "Draft Mode"
           },
+          "narrator_voice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrator Voice Id"
+          },
           "style_notes": {
             "type": "string",
             "title": "Style Notes"
@@ -13365,6 +14023,7 @@
           "default_video_model_id",
           "default_image_model_id",
           "draft_mode",
+          "narrator_voice_id",
           "style_notes",
           "archived",
           "created_at",
@@ -13459,6 +14118,17 @@
               }
             ],
             "title": "Draft Mode"
+          },
+          "narrator_voice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrator Voice Id"
           },
           "style_notes": {
             "anyOf": [
@@ -15081,6 +15751,19 @@
             ],
             "title": "Dialogue"
           },
+          "narration": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narration",
+            "description": "Voice-over for this shot"
+          },
           "sfx_prompt": {
             "anyOf": [
               {
@@ -15337,6 +16020,10 @@
             "type": "array",
             "title": "Dialogue"
           },
+          "narration": {
+            "type": "string",
+            "title": "Narration"
+          },
           "sfx_prompt": {
             "anyOf": [
               {
@@ -15469,6 +16156,7 @@
           "generation_mode",
           "ingredient_ids",
           "dialogue",
+          "narration",
           "sfx_prompt",
           "music_cue",
           "needs_extend",
@@ -15777,6 +16465,19 @@
             ],
             "title": "Dialogue"
           },
+          "narration": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narration",
+            "description": "Voice-over for this shot"
+          },
           "sfx_prompt": {
             "anyOf": [
               {
@@ -15920,6 +16621,24 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ShotUpdate"
+      },
+      "SkippedLine": {
+        "properties": {
+          "shot_id": {
+            "type": "string",
+            "title": "Shot Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shot_id",
+          "reason"
+        ],
+        "title": "SkippedLine"
       },
       "SkippedShot": {
         "properties": {

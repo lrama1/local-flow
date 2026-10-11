@@ -60,6 +60,26 @@ test("idea → story → shots → generate all → timeline → export", async 
   await page.getByRole("tab", { name: "Timeline" }).click();
   await page.getByRole("button", { name: "Auto-assemble" }).first().click();
   await expect(page.getByText(`${SHOTS} clips placed`)).toBeVisible();
+
+  // Narration: the fake LLM writes a line per shot (one stays silent), the fake TTS voices them, and each
+  // lands on the Narration track at its shot.
+  const narration = page.getByTestId("narration-panel");
+  await narration.getByRole("button", { name: "Write narration" }).click();
+  await expect(page.getByTestId("narration-written")).toContainText("Wrote 4 lines");
+  await narration.getByRole("button", { name: /^Voice narration/ }).click();
+  await expect
+    .poll(
+      async () => {
+        const tl = await api<{ timeline: { tracks: { id: string; clips: unknown[] }[] } }>(
+          page,
+          `/api/projects/${projectId}/timeline`,
+        );
+        return tl.timeline.tracks.find((t) => t.id === "a_narration")?.clips.length ?? 0;
+      },
+      { timeout: 60_000, intervals: [500] },
+    )
+    .toBe(4);
+
   const exportPanel = page.getByTestId("export-panel");
   await exportPanel.getByRole("button", { name: "Export MP4" }).click();
   await expect(exportPanel.getByTestId("export-history").getByRole("listitem")).toHaveCount(1, {

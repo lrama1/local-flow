@@ -15,11 +15,15 @@ from localflow.schemas.timeline import Clip, TimelineData, Track, Transition
 PRESET_SHORT_SIDE = {"720p": 720, "1080p": 1080}
 DEFAULT_TRACKS = (
     ("v1", "video", "Video"),
+    ("a_narration", "audio", "Narration"),
     ("a_dialogue", "audio", "Dialogue"),
     ("a_sfx", "audio", "Sound effects"),
     ("a_music", "audio", "Music"),
 )
 MIN_CLIP_FRAMES = 1
+NARRATION_TRACK = "a_narration"
+NARRATION_LEAD_S = 0.25  # a line starts this long after its shot's clip does (Section 12.3)
+FOLLOW_TOLERANCE_S = 0.05
 
 
 def _even(x: float) -> int:
@@ -58,6 +62,36 @@ def default_timeline(aspect_ratio: str, fps: int) -> TimelineData:
 
 def frames(seconds: float, fps: int) -> int:
     return round(seconds * fps + 1e-9)
+
+
+def with_narration_track(timeline: TimelineData) -> TimelineData:
+    """Timelines saved before M8 have no Narration track: add it, first among the audio tracks."""
+    if any(t.id == NARRATION_TRACK for t in timeline.tracks):
+        return timeline
+    tl = timeline.model_copy(deep=True)
+    at = next(i for i, t in enumerate(tl.tracks) if t.kind == "video") + 1
+    tl.tracks.insert(at, Track(id=NARRATION_TRACK, kind="audio", name="Narration"))
+    return tl
+
+
+def follow_video_moves(before: TimelineData, after: TimelineData) -> int:
+    """Moves narration clips along with their shots' video clips (Section 12.3). A narration clip that was
+    still at its anchor (its shot's old clip start + the lead) is re-anchored to the clip's new start; one
+    the user dragged elsewhere is left alone. Mutates `after`; returns how many clips moved."""
+    old = {c.shot_id: c.start_s for c in before.video.clips if c.shot_id}
+    new = {c.shot_id: c.start_s for c in after.video.clips if c.shot_id}
+    track = next((t for t in after.tracks if t.id == NARRATION_TRACK), None)
+    moved = 0
+    for c in track.clips if track else []:
+        if c.shot_id not in old or c.shot_id not in new:
+            continue
+        if abs(c.start_s - (old[c.shot_id] + NARRATION_LEAD_S)) <= FOLLOW_TOLERANCE_S:
+            target = round(new[c.shot_id] + NARRATION_LEAD_S, 3)
+            if abs(target - c.start_s) > 1e-6:
+                c.start_s, moved = target, moved + 1
+    if moved and track:
+        track.clips.sort(key=lambda x: (x.start_s, x.id))
+    return moved
 
 
 def clip_frames(clip: Clip, fps: int) -> int:

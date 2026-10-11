@@ -21,6 +21,7 @@ class Project(IdMixin, TimestampMixin, table=True):
     default_video_model_id: str | None = None
     default_image_model_id: str | None = None
     draft_mode: bool = False
+    narrator_voice_id: str | None = None
     style_notes: str = ""
     archived: bool = False
 
@@ -209,6 +210,7 @@ class Shot(IdMixin, TimestampMixin, table=True):
     generation_mode: str = "i2v"
     ingredient_ids_json: list[str] = Field(default_factory=list, sa_type=JSON)
     dialogue_json: list[dict[str, Any]] = Field(default_factory=list, sa_type=JSON)
+    narration: str = ""  # M8: the film's voice-over for this shot (Section 12.3)
     sfx_prompt: str | None = None
     music_cue: str | None = None
     needs_extend: bool = False

@@ -49,7 +49,7 @@ DEFAULT_CONFIG_TOML = """\
 # anthropic = "claude-sonnet-5"
 # openrouter = "anthropic/claude-sonnet-5"
 #
-# [llm_purpose_models]             # refine | bible | breakdown | prompt_rewrite | vision_review | ...
+# [llm_purpose_models]             # refine | bible | breakdown | prompt_rewrite | narration | ...
 # breakdown = "openai/gpt-5.5"
 """
 

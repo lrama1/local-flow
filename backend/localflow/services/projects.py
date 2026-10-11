@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from sqlmodel import col, select
+from sqlmodel import Session, col, select
 
 from localflow.db import Database
-from localflow.errors import not_found
-from localflow.models import Project, Setting, utcnow
+from localflow.errors import bad_request, not_found
+from localflow.models import Project, Setting, Voice, utcnow
 from localflow.schemas.core import ProjectCreate, ProjectUpdate
 from localflow.services.assets import AssetService
 
@@ -33,18 +33,27 @@ class ProjectService:
     def create(self, data: ProjectCreate) -> Project:
         p = Project(**data.model_dump())
         with self.db.session() as s:
+            self._check_voice(s, p.narrator_voice_id)
             s.add(p)
             s.commit()
             s.refresh(p)
         self.assets.project_dir(p.id).mkdir(parents=True, exist_ok=True)
         return p
 
+    @staticmethod
+    def _check_voice(s: Session, voice_id: str | None) -> None:
+        if voice_id is not None and s.get(Voice, voice_id) is None:
+            raise bad_request("invalid_voice", "narrator_voice_id isn't a voice in the library.")
+
     def update(self, project_id: str, data: ProjectUpdate) -> Project:
         with self.db.session() as s:
             p = s.get(Project, project_id)
             if p is None:
                 raise not_found("Project", project_id)
-            for k, v in data.model_dump(exclude_unset=True).items():
+            changes = data.model_dump(exclude_unset=True)
+            if "narrator_voice_id" in changes:
+                self._check_voice(s, changes["narrator_voice_id"])
+            for k, v in changes.items():
                 setattr(p, k, v)
             p.updated_at = utcnow()
             s.add(p)

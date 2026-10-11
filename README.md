@@ -223,6 +223,32 @@ community repack (Apache 2.0); the original distillation states no license.
 - **Speed:** Kokoro takes about 2 s per shot (12 s for the first job). MMAudio takes about 30 s to load,
   then about 3 s per 5 s take. Takes over 10 s are made in overlapping 8 s windows.
 
+## Narration (M8)
+
+A film-level voice-over. The words are written and edited per shot, where you can see the picture; the voice
+is made on the Timeline, as one continuous track.
+
+- **Write it:** **Timeline tab → Narration → Write narration.** The LLM reads the story and the shots in
+  order and writes one line per shot (or leaves a shot silent), sized to the shot (about 2.3 words per
+  second). The optional **Style** box sets perspective and tone ("a hushed storybook"). A whole film costs
+  a fraction of a cent. Or type the lines yourself in the panel or in a shot's **Narration** field.
+  **Rewrite existing lines** replaces lines that already exist. The step has its own model picker in
+  Settings → LLM ("Narration").
+- **Choose the narrator** (one voice per project, from the Voices library) and the **Pace**. Without a
+  voice, the panel uses a suggested one and says so.
+- **Voice narration** voices every line that's missing or out of date (it shows how many), one Kokoro take
+  per shot, about 2 s each. **Voice** or **Re-voice** on a row redoes one line; older takes are under the
+  shot's audio candidates (**Use** switches back).
+- **On the timeline:** each line starts a quarter second into its shot's clip, on the **Narration** track
+  (violet). It isn't squeezed to the clip: it may run into the next shot, and a **+N s over** badge warns
+  if it would run into the next line (shorten the line, speed it up or lengthen the shot). Editing a line
+  marks its take **out of date** until you voice it again.
+- **It follows the picture:** reorder or trim clips and the narration moves with its shots. A line you
+  dragged somewhere stays where you put it; **Re-sync** puts every line back on its shot.
+- **Export:** **Lower music under narration** (on by default) dips the music, the sound effects and the
+  clips' own sound by about 9–11 dB while the narrator speaks, then brings them back. The preview doesn't
+  duck; the export does. Dialogue is never ducked.
+
 ## Timeline and export (M5)
 
 - **Timeline tab → Auto-assemble** puts each shot's selected take on the video track, in board order.
@@ -234,13 +260,14 @@ community repack (Apache 2.0); the original distillation states no license.
   - Click a clip to open its panel: exact in/out, transition (cut, crossfade, fade from black) with its
     length, a different take of the same shot, moving it earlier or later, and the shot's prompt with
     **new takes / extend**.
-- **Audio:** use **+** on Dialogue, Sound effects or Music to add a project audio file at the playhead, or
-  upload one. Drag audio freely; the panel sets start, trim, gain and track. The speaker buttons mute a
-  track. On Video, that mutes the clips' own sound.
+- **Audio:** use **+** on Narration, Dialogue, Sound effects or Music to add a project audio file at the
+  playhead, or upload one. Drag audio freely; the panel sets start, trim, gain and track. The speaker
+  buttons mute a track. On Video, that mutes the clips' own sound.
 - **Preview:** Space plays and pauses, ←/→ step a frame (Shift: a second), Home/End jump, and Delete
   removes the selected clip. The preview is approximate; the export is exact.
 - **Export:**
-  - Pick **720p** or **1080p** (in the project's aspect ratio) and optionally **Normalize loudness**.
+  - Pick **720p** or **1080p** (in the project's aspect ratio), optionally **Normalize loudness**, and
+    leave **Lower music under narration** on (see [Narration](#narration-m8)).
   - The MP4 (H.264 + AAC) is saved under `projects/<id>/exports/` and listed under the button, with play
     and download.
   - Clips with a slightly different aspect ratio (Wan's 1280×704) are cropped to fill the frame; others

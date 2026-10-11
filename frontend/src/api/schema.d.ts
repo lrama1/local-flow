@@ -1780,6 +1780,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project_id}/narration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Narration Plan
+         * @description One row per shot: its line, voiced status, where it starts and whether it overruns the next line.
+         */
+        get: operations["narration_plan_api_projects__project_id__narration_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/narration/write": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write Narration
+         * @description The LLM writes a line per shot (only shots without narration unless `overwrite`).
+         */
+        post: operations["write_narration_api_projects__project_id__narration_write_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/narration/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Narration
+         * @description Voices the lines with the narrator voice: one TTS job per shot; each take lands on the timeline.
+         */
+        post: operations["generate_narration_api_projects__project_id__narration_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/narration/resync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resync Narration
+         * @description Moves every narration clip back to its shot's clip start (plus the lead).
+         */
+        post: operations["resync_narration_api_projects__project_id__narration_resync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/character-templates": {
         parameters: {
             query?: never;
@@ -2900,6 +2980,12 @@ export interface components {
              * @default false
              */
             loudnorm?: boolean;
+            /**
+             * Duck
+             * @description Lower music and effects under the narration (when it has clips)
+             * @default true
+             */
+            duck?: boolean;
         };
         /** ExtendBody */
         ExtendBody: {
@@ -4190,6 +4276,156 @@ export interface components {
             /** Notes */
             notes: string[];
         };
+        /** NarratedLine */
+        NarratedLine: {
+            /** Shot Id */
+            shot_id: string;
+            /** Number */
+            number: string;
+            /** Text */
+            text: string;
+            /** Words */
+            words: number;
+            /** Budget Words */
+            budget_words: number;
+        };
+        /** NarrationGenerateBody */
+        NarrationGenerateBody: {
+            /**
+             * Shot Ids
+             * @description Only these shots; default all
+             */
+            shot_ids?: string[] | null;
+            /**
+             * Only Missing
+             * @description Skip lines that are already voiced and up to date
+             * @default true
+             */
+            only_missing?: boolean;
+            /**
+             * Speed
+             * @description Narration pace
+             * @default 1
+             */
+            speed?: number;
+            /** Tts Model Entry Id */
+            tts_model_entry_id?: string | null;
+            /** Seed */
+            seed?: number | null;
+        };
+        /** NarrationGenerateOut */
+        NarrationGenerateOut: {
+            /** Jobs */
+            jobs: components["schemas"]["JobOut"][];
+            /** Skipped */
+            skipped: components["schemas"]["SkippedLine"][];
+            plan: components["schemas"]["NarrationPlanOut"];
+        };
+        /** NarrationPlanOut */
+        NarrationPlanOut: {
+            narrator: components["schemas"]["NarratorOut"];
+            /** Tts Model */
+            tts_model: string | null;
+            /** Speed */
+            speed: number;
+            /** Shots */
+            shots: components["schemas"]["NarrationShotOut"][];
+            /** Total Words */
+            total_words: number;
+            /** Notes */
+            notes: string[];
+        };
+        /** NarrationShotOut */
+        NarrationShotOut: {
+            /** Shot Id */
+            shot_id: string;
+            /**
+             * Number
+             * @description Scene.shot, e.g. 2.1
+             */
+            number: string;
+            /** Scene Title */
+            scene_title: string;
+            /** Duration S */
+            duration_s: number;
+            /** Text */
+            text: string;
+            /** Words */
+            words: number;
+            /** Budget Words */
+            budget_words: number;
+            /** Estimated S */
+            estimated_s: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "empty" | "text" | "voiced" | "stale";
+            /** Selected Asset Id */
+            selected_asset_id: string | null;
+            /** Asset Duration S */
+            asset_duration_s: number | null;
+            /**
+             * Clip Start S
+             * @description Where the shot's clip starts on the timeline
+             */
+            clip_start_s: number | null;
+            /**
+             * Start S
+             * @description Where its narration starts (or would)
+             */
+            start_s: number | null;
+            /**
+             * Overflow S
+             * @description How far the line runs into the next narrated shot
+             */
+            overflow_s: number;
+        };
+        /** NarrationWriteBody */
+        NarrationWriteBody: {
+            /**
+             * Overwrite
+             * @description Rewrite shots that already have narration
+             * @default false
+             */
+            overwrite?: boolean;
+            /**
+             * Style
+             * @description Perspective and tone, e.g. a hushed storybook
+             */
+            style?: string | null;
+            /**
+             * Shot Ids
+             * @description Only these shots; default all
+             */
+            shot_ids?: string[] | null;
+            llm?: components["schemas"]["LlmChoice"] | null;
+        };
+        /** NarrationWriteOut */
+        NarrationWriteOut: {
+            /** Updated */
+            updated: components["schemas"]["NarratedLine"][];
+            /**
+             * Skipped
+             * @description Shots left alone (already narrated, or not asked for)
+             */
+            skipped: number;
+            usage: components["schemas"]["UsageOut"];
+            /** Warnings */
+            warnings: string[];
+        };
+        /** NarratorOut */
+        NarratorOut: {
+            /** Voice Id */
+            voice_id: string | null;
+            /** Voice Name */
+            voice_name: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "project" | "suggested" | "none";
+        };
         /** Page[AssetOut] */
         Page_AssetOut_: {
             /** Items */
@@ -4275,6 +4511,8 @@ export interface components {
              * @default false
              */
             draft_mode?: boolean;
+            /** Narrator Voice Id */
+            narrator_voice_id?: string | null;
             /**
              * Style Notes
              * @default
@@ -4299,6 +4537,8 @@ export interface components {
             default_image_model_id: string | null;
             /** Draft Mode */
             draft_mode: boolean;
+            /** Narrator Voice Id */
+            narrator_voice_id: string | null;
             /** Style Notes */
             style_notes: string;
             /** Archived */
@@ -4332,6 +4572,8 @@ export interface components {
             default_image_model_id?: string | null;
             /** Draft Mode */
             draft_mode?: boolean | null;
+            /** Narrator Voice Id */
+            narrator_voice_id?: string | null;
             /** Style Notes */
             style_notes?: string | null;
             /** Archived */
@@ -4854,6 +5096,11 @@ export interface components {
             ingredient_ids?: string[] | null;
             /** Dialogue */
             dialogue?: components["schemas"]["DialogueLine"][] | null;
+            /**
+             * Narration
+             * @description Voice-over for this shot
+             */
+            narration?: string | null;
             /** Sfx Prompt */
             sfx_prompt?: string | null;
             /** Music Cue */
@@ -4925,6 +5172,8 @@ export interface components {
             ingredient_ids: string[];
             /** Dialogue */
             dialogue: components["schemas"]["DialogueLine"][];
+            /** Narration */
+            narration: string;
             /** Sfx Prompt */
             sfx_prompt: string | null;
             /** Music Cue */
@@ -5044,6 +5293,11 @@ export interface components {
             ingredient_ids?: string[] | null;
             /** Dialogue */
             dialogue?: components["schemas"]["DialogueLine"][] | null;
+            /**
+             * Narration
+             * @description Voice-over for this shot
+             */
+            narration?: string | null;
             /** Sfx Prompt */
             sfx_prompt?: string | null;
             /** Music Cue */
@@ -5072,6 +5326,13 @@ export interface components {
              * @description Keyframe reference override; null restores automatic
              */
             reference_asset_ids?: string[] | null;
+        };
+        /** SkippedLine */
+        SkippedLine: {
+            /** Shot Id */
+            shot_id: string;
+            /** Reason */
+            reason: string;
         };
         /** SkippedShot */
         SkippedShot: {
@@ -10056,6 +10317,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MusicGenOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    narration_plan_api_projects__project_id__narration_get: {
+        parameters: {
+            query?: {
+                speed?: number;
+            };
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrationPlanOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    write_narration_api_projects__project_id__narration_write_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NarrationWriteBody"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrationWriteOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_narration_api_projects__project_id__narration_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["NarrationGenerateBody"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NarrationGenerateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resync_narration_api_projects__project_id__narration_resync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineOut"];
                 };
             };
             /** @description Validation Error */

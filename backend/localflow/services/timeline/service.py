@@ -20,10 +20,26 @@ from localflow.schemas.timeline import (
     Transition,
 )
 from localflow.services.events import EventBus
-from localflow.services.timeline.model import default_timeline, duration_s, normalize
+from localflow.services.timeline.model import (
+    NARRATION_LEAD_S,
+    NARRATION_TRACK,
+    default_timeline,
+    duration_s,
+    follow_video_moves,
+    normalize,
+    with_narration_track,
+)
 
 # Which audio track a shot's selected audio lands on, by the job that made it (M6 adds more).
 _AUDIO_TRACK_BY_JOB = {"tts": "a_dialogue", "v2a": "a_sfx", "music": "a_music"}
+# ...and by the slot it was made for (a narration take is a `tts` job too).
+_AUDIO_TRACK_BY_SLOT = {"narration": NARRATION_TRACK}
+
+
+def audio_track_for(asset: Asset) -> str:
+    gen = asset.generation_json or {}
+    slot = str((gen.get("target_ref") or {}).get("slot"))
+    return _AUDIO_TRACK_BY_SLOT.get(slot) or _AUDIO_TRACK_BY_JOB.get(str(gen.get("job_type")), "a_sfx")
 
 
 class TimelineService:
@@ -48,7 +64,7 @@ class TimelineService:
         if not raw:
             return default_timeline(project.aspect_ratio, project.fps)
         try:
-            return TimelineData.model_validate(raw)
+            return with_narration_track(TimelineData.model_validate(raw))
         except ValidationError:
             # A stored timeline from an older shape: start over rather than fail the tab.
             return default_timeline(project.aspect_ratio, project.fps)
@@ -100,6 +116,8 @@ class TimelineService:
         return self._out(project_id, self.load(project_id), row, [])
 
     def put(self, project_id: str, timeline: TimelineData) -> TimelineOut:
+        before = self.load(project_id)
+        timeline = with_narration_track(timeline)
         with self.db.session() as s:
             self._project(s, project_id)
             assets = self._assets(s, project_id, timeline)
@@ -113,6 +131,7 @@ class TimelineService:
                     if track.kind == "audio" and a.type != "audio":
                         raise bad_request("invalid_asset", "Audio tracks only take audio.")
             tl, notes = normalize(timeline, {a.id: a.duration_s for a in assets.values()})
+            follow_video_moves(before, tl)  # narration follows its shots (Section 12.3)
             row = self._save(s, project_id, tl)
         self.bus.publish("timeline.updated", project_id=project_id)
         return self._out(project_id, tl, row, notes)
@@ -189,11 +208,17 @@ class TimelineService:
                 audio = assets.get(aid)
                 if audio is None or audio.type != "audio" or not audio.duration_s:
                     continue
-                track_id = _AUDIO_TRACK_BY_JOB.get(str(audio.generation_json.get("job_type")), "a_sfx")
+                track_id = audio_track_for(audio)
                 if track_id == "a_music" and body.keep_music and tracks["a_music"].clips:
                     continue  # the kept music wins
+                lead = NARRATION_LEAD_S if track_id == NARRATION_TRACK else 0.0
                 tracks[track_id].clips.append(
-                    Clip(asset_id=aid, start_s=starts[clip.id], out_s=audio.duration_s, shot_id=shot.id)
+                    Clip(
+                        asset_id=aid,
+                        start_s=starts[clip.id] + lead,
+                        out_s=audio.duration_s,
+                        shot_id=shot.id,
+                    )
                 )
         tl, more = normalize(tl, durations)
         with self.db.session() as s:
@@ -225,11 +250,13 @@ class TimelineService:
             if video is None or track is None or not asset.duration_s:
                 return False
             track.clips = [c for c in track.clips if c.shot_id != shot_id]
-            in_s = min(video.in_s, max(0.0, asset.duration_s - 0.05))
+            narration = track_id == NARRATION_TRACK
+            # Narration isn't fitted to the clip: it starts a beat in and may run past the shot.
+            in_s = 0.0 if narration else min(video.in_s, max(0.0, asset.duration_s - 0.05))
             track.clips.append(
                 Clip(
                     asset_id=asset.id,
-                    start_s=video.start_s,
+                    start_s=video.start_s + (NARRATION_LEAD_S if narration else 0.0),
                     in_s=in_s,
                     out_s=asset.duration_s,
                     shot_id=shot_id,
@@ -238,6 +265,23 @@ class TimelineService:
             return True
 
         return self._with_timeline(project_id, edit)
+
+    def resync_narration(self, project_id: str) -> TimelineOut:
+        """Re-anchors every narration clip to its shot's video clip (start + the lead), wherever it was."""
+
+        def edit(tl: TimelineData) -> bool:
+            starts = {c.shot_id: c.start_s for c in tl.video.clips if c.shot_id}
+            track = next((t for t in tl.audio if t.id == NARRATION_TRACK), None)
+            changed = False
+            for c in track.clips if track else []:
+                if c.shot_id in starts:
+                    target = round(starts[c.shot_id] + NARRATION_LEAD_S, 3)
+                    if abs(target - c.start_s) > 1e-6:
+                        c.start_s, changed = target, True
+            return changed
+
+        self._with_timeline(project_id, edit)
+        return self.get(project_id)
 
     def scene_start(self, project_id: str, scene_id: str) -> float | None:
         """Where the scene's first clip starts on the timeline, or None if none of its shots are placed."""

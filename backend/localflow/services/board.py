@@ -428,6 +428,8 @@ class BoardService:
                 if bad:
                     raise bad_request("invalid_ingredient", f"Unknown speaker id(s): {', '.join(bad)}")
                 out["dialogue_json"] = v
+            elif k == "narration":
+                out["narration"] = (v or "").strip()
             elif k in ("selected_keyframe_asset_id", "selected_end_keyframe_asset_id"):
                 if v is not None:
                     store.check_image(s, project_id, v)

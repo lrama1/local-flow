@@ -31,6 +31,7 @@ const RULER_H = 24;
 const ROW_H = { video: 64, audio: 40 } as const;
 const HEADER_W = 148;
 const AUDIO_COLORS: Record<string, string> = {
+  a_narration: "bg-violet-500/30 border-violet-400/60",
   a_dialogue: "bg-sky-500/30 border-sky-400/60",
   a_sfx: "bg-amber-500/30 border-amber-400/60",
   a_music: "bg-emerald-500/30 border-emerald-400/60",

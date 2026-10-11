@@ -33,7 +33,7 @@ log = logging.getLogger("localflow.audiogen")
 
 AudioSlot = Literal["dialogue", "sfx"]
 ALL_PARTS: tuple[AudioSlot, ...] = ("dialogue", "sfx")
-SLOT_TRACK = {"dialogue": "a_dialogue", "sfx": "a_sfx"}
+SLOT_TRACK = {"dialogue": "a_dialogue", "sfx": "a_sfx", "narration": "a_narration"}
 JOB_SLOT = {"tts": "dialogue", "v2a": "sfx"}
 WORDS_PER_S = 2.6  # ~155 wpm, typical for TTS at speed 1
 LEAD_S, GAP_S = 0.3, 0.35

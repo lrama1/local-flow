@@ -32,6 +32,7 @@ class ProjectCreate(BaseModel):
     default_video_model_id: str | None = None
     default_image_model_id: str | None = None
     draft_mode: bool = False
+    narrator_voice_id: str | None = None
     style_notes: str = ""
 
 
@@ -45,6 +46,7 @@ class ProjectUpdate(BaseModel):
     default_video_model_id: str | None = None
     default_image_model_id: str | None = None
     draft_mode: bool | None = None
+    narrator_voice_id: str | None = None
     style_notes: str | None = None
     archived: bool | None = None
 
@@ -58,6 +60,7 @@ class ProjectOut(BaseModel):
     default_video_model_id: str | None
     default_image_model_id: str | None
     draft_mode: bool
+    narrator_voice_id: str | None
     style_notes: str
     archived: bool
     created_at: datetime

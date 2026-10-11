@@ -148,6 +148,7 @@ class ShotOut(BaseModel):
     generation_mode: GenerationMode
     ingredient_ids: list[str]
     dialogue: list[DialogueLine]
+    narration: str
     sfx_prompt: str | None
     music_cue: str | None
     needs_extend: bool
@@ -180,6 +181,7 @@ class ShotOut(BaseModel):
             generation_mode=s.generation_mode,
             ingredient_ids=s.ingredient_ids_json,
             dialogue=[DialogueLine(**d) for d in s.dialogue_json],
+            narration=s.narration or "",
             sfx_prompt=s.sfx_prompt,
             music_cue=s.music_cue,
             needs_extend=s.needs_extend,
@@ -250,6 +252,7 @@ class ShotFields(BaseModel):
     generation_mode: GenerationMode | None = None
     ingredient_ids: list[str] | None = None
     dialogue: list[DialogueLine] | None = None
+    narration: str | None = Field(default=None, max_length=2000, description="Voice-over for this shot")
     sfx_prompt: str | None = None
     music_cue: str | None = None
     needs_extend: bool | None = None

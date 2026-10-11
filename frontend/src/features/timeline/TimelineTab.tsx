@@ -18,6 +18,7 @@ import { plural } from "@/lib/utils";
 import { AddAudioDialog } from "./AddAudioDialog";
 import { ClipInspector } from "./ClipInspector";
 import { ExportPanel } from "./ExportPanel";
+import { NarrationPanel } from "./NarrationPanel";
 import {
   complete,
   findClip,
@@ -343,6 +344,7 @@ export function TimelineTab({ projectId }: { projectId: string }) {
         onToggleMute={(track) => change(updateTrack(timeline, track.id, { muted: !track.muted }))}
         onAddAudio={setAdding}
       />
+      <NarrationPanel projectId={projectId} />
       {adding && (
         <AddAudioDialog
           track={adding}

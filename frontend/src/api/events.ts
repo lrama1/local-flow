@@ -6,6 +6,7 @@ import { ck } from "./characters";
 import { getToken, type Asset, type Job, type Schemas, type SystemStatus, type WorkerInfo } from "./client";
 import { lk } from "./library";
 import { mk, type ModelEntry } from "./models";
+import { nk } from "./narration";
 import { JOBS_PAGE_SIZE, qk } from "./queries";
 import { sk } from "./story";
 import { tk } from "./timeline";
@@ -96,9 +97,11 @@ export function handleServerEvent(qc: QueryClient, ev: ServerEvent): void {
       break;
     case "asset.created":
       void qc.invalidateQueries({ queryKey: qk.assetsRoot(ev.asset.project_id) });
+      void qc.invalidateQueries({ queryKey: nk.root }); // a narration take may have landed
       break;
     case "asset.deleted":
       void qc.invalidateQueries({ queryKey: ["assets"] });
+      void qc.invalidateQueries({ queryKey: nk.root });
       break;
     case "project.deleted":
       void qc.invalidateQueries({ queryKey: qk.projects });
@@ -110,9 +113,11 @@ export function handleServerEvent(qc: QueryClient, ev: ServerEvent): void {
     case "board.updated":
       void qc.invalidateQueries({ queryKey: sk.board(ev.project_id) });
       void qc.invalidateQueries({ queryKey: ck.referencesRoot });
+      void qc.invalidateQueries({ queryKey: nk.root }); // narration text and takes live on the shots
       break;
     case "timeline.updated":
       void qc.invalidateQueries({ queryKey: tk.timeline(ev.project_id) });
+      void qc.invalidateQueries({ queryKey: nk.root }); // where each line starts, and overflow
       break;
     case "ingredients.updated":
       void qc.invalidateQueries({ queryKey: sk.ingredients(ev.project_id) });

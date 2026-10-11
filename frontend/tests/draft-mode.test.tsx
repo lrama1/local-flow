@@ -21,6 +21,7 @@ function makeProject(o: Partial<Project> = {}): Project {
     default_video_model_id: null,
     default_image_model_id: null,
     draft_mode: false,
+    narrator_voice_id: null,
     style_notes: "",
     archived: false,
     created_at: now,

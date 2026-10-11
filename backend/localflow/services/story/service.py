@@ -725,6 +725,9 @@ def _usage_out(res: StructuredResult[Any]) -> UsageOut:
     )
 
 
+usage_out = _usage_out  # for the other LLM steps (narration)
+
+
 def _dedupe_bible_keys(bible: StoryBible) -> StoryBible:
     out = bible.model_copy(deep=True)
     seen: set[str] = {STYLE_KEY}

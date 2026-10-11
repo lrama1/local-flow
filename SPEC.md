@@ -234,7 +234,7 @@ All IDs are ULIDs (strings). All tables have `created_at` and `updated_at`. JSON
 ### 6.1 Tables
 
 **projects**
-`id, name, description, aspect_ratio ("16:9"|"9:16"|"1:1"), fps (int, default 24), default_video_model_id, default_image_model_id, draft_mode (bool, default false; Section 11.8), style_notes (text), archived (bool)`
+`id, name, description, aspect_ratio ("16:9"|"9:16"|"1:1"), fps (int, default 24), default_video_model_id, default_image_model_id, draft_mode (bool, default false; Section 11.8), narrator_voice_id (nullable `voices.id`; Section 12.3), style_notes (text), archived (bool)`
 
 **stories** (one active per project; keep revisions)
 `id, project_id, revision (int), raw_idea (text), refined_story (text), bible_json (StoryBible), llm_provider, llm_model, status ("draft"|"refined"|"broken_down")`
@@ -258,7 +258,7 @@ All IDs are ULIDs (strings). All tables have `created_at` and `updated_at`. JSON
 `id, project_id, story_id, index, title, summary, location_ingredient_id (nullable)`
 
 **shots**
-`id, scene_id, index, duration_s (float), shot_type ("wide"|"medium"|"close"|"extreme_close"|"insert"|"pov"|"over_shoulder"), camera_move (enum, Section 13.5), video_prompt, negative_prompt, keyframe_prompt, end_keyframe_prompt (nullable), generation_mode ("t2v"|"i2v"|"flf2v"|"ref2v"), ingredient_ids_json, dialogue_json (list of {character_ingredient_id, line, emotion}), sfx_prompt, music_cue, status ("planned"|"keyframe_ready"|"video_ready"|"approved"), selected_keyframe_asset_id, selected_end_keyframe_asset_id, selected_video_asset_id, selected_audio_asset_ids_json`
+`id, scene_id, index, duration_s (float), shot_type ("wide"|"medium"|"close"|"extreme_close"|"insert"|"pov"|"over_shoulder"), camera_move (enum, Section 13.5), video_prompt, negative_prompt, keyframe_prompt, end_keyframe_prompt (nullable), generation_mode ("t2v"|"i2v"|"flf2v"|"ref2v"), ingredient_ids_json, dialogue_json (list of {character_ingredient_id, line, emotion}), narration (text, default ""; Section 12.3), sfx_prompt, music_cue, status ("planned"|"keyframe_ready"|"video_ready"|"approved"), selected_keyframe_asset_id, selected_end_keyframe_asset_id, selected_video_asset_id, selected_audio_asset_ids_json`
 
 **assets**
 `id, project_id, type ("image"|"video"|"audio"), path (relative to project dir), thumb_path, width, height, duration_s, fps, has_audio (bool), source ("generated"|"uploaded"|"extracted"|"export"|"imported"), parent_asset_ids_json, generation_json (full params incl. model id, seed, prompts, adapter version), tags_json, favorite (bool)`
@@ -293,7 +293,7 @@ User-defined groupings of assets: `collections (id, project_id, name (unique per
 ### 7.1 Config (`config.toml` + env overrides, prefix `LOCALFLOW_`)
 - `data_dir`, `ffmpeg_path`, `ffprobe_path`, `host` (fixed default `127.0.0.1`), `port` (default `8765`)
 - `vram_profile` (`low`|`balanced`|`quality`, default `balanced`)
-- `default_llm_provider`, `default_llm_model` (per purpose overrides: `refine`, `bible`, `breakdown`, `prompt_rewrite`, `vision_review`)
+- `default_llm_provider`, `default_llm_model` (per purpose overrides: `refine`, `bible`, `breakdown`, `prompt_rewrite`, `vision_review`, `narration`)
 - `hf_home` (defaults to `<data_dir>/models/hf`)
 - `allow_nsfw_models` (default `false`; hides NSFW Civitai results)
 - `allow_pickle_weights` (default `false`; see Section 18)
@@ -435,6 +435,13 @@ Rewrites one shot's prompts based on a user instruction ("make it night", "more 
 **Step 5 — Vision review (optional; needs a vision-capable model)** (`purpose=vision_review`)
 Sends a keyframe (or two frames of a take, at 30% and 70%) and the shot's reference images (the ones keyframe composition uses, Section 11.7) to a vision-capable model. Returns `{consistent: bool, issues: [str], suggested_prompt_fix: str}`. The fix is the complete revised keyframe, end-frame or video prompt (whichever the image came from), keeping its @mentions. The UI applies it to the shot panel's draft.
 
+**Step 6 — Narration (on demand)** (`purpose=narration`)
+Writes the film's voice-over from the story, the bible, and the shots in order (each with its duration, visible action and dialogue). Returns `{lines: [{n, text}]}`, one entry per shot where `n` is the shot's 1-based position and `text` may be empty (a silent shot). Rules:
+- A line adds what the picture can't show (thoughts, time, context, transitions). It doesn't describe what the shot plainly shows or repeat the shot's dialogue.
+- Length budget per line: about 2.3 words per second of the shot (`max(0, duration − 0.6) × 2.3`, rounded down). The budget is soft: a line may run into the next shot when that shot has no narration of its own.
+- One consistent voice (perspective and tone from the `style` text, else the story's `tone`), no stage directions or quotation marks.
+Only shots with no narration yet are written unless `overwrite` is set. The lines are saved into `shots.narration`; the step doesn't create a story revision.
+
 ### 8.4 Prompt templates
 - Stored as versioned Jinja2 templates in `services/llm/prompts/` (`refine.v1.j2`, etc.). The template version is recorded with each story revision.
 - Each template contains a role, task, constraints, the render constraints block, and the JSON schema. The user's text is wrapped in delimiters and treated as data (basic prompt-injection hygiene).
@@ -449,6 +456,7 @@ Sends a keyframe (or two frames of a take, at 30% and 70%) and the shot's refere
   - `character_expand`: short description (+ optional template) → `{visual_prompt, character_info, voice_hints}`.
   - `character_describe`: image(s) → `{visual_prompt}`. Requires a vision-capable model; the action is hidden otherwise.
   - `voice_design`: voice description + the TTS adapter's voice-param JSON schema → params (Section 12.2).
+  - `narration`: story + bible + the shots in order → one narration line per shot (Section 8.3 step 6, Section 12.3).
 
 ---
 
@@ -675,6 +683,19 @@ The total respects the edit model's maximum reference count, falling back to the
 - **Custom voices:** pick a base voice, name it, and describe the sound ("fast-paced, slightly raspy"). If the TTS adapter declares `supports_voice_design` (text-described voices), the description is passed directly. Otherwise `purpose=voice_design` maps the description onto the adapter's voice-param JSON schema (e.g., base-voice blend weights, speed, pitch where supported), validated with Pydantic. The user can tweak the params and audition before saving. Custom voices are global, so library characters keep them across projects. *As built (M6):* Kokoro's params (`VoiceParams`) are up to two blend voices of the same language with weights, a base weight, and a pace (0.7–1.4); no adapter has `supports_voice_design` yet. Built-ins sync lazily when the set of usable TTS adapters changes; Japanese and Mandarin Kokoro voices are omitted (extra G2P packages).
 - Voice cloning from uploaded audio is out of scope for v1 (Section 1.3).
 
+### 12.3 Narration
+A film-level voice-over. Its **text** is written and edited per shot (where the picture is in view); its **voice** is made and placed on the Timeline (where the final cut exists), as one continuous Narration track.
+
+- **Data:** `shots.narration` (text, "" = a silent shot) and `projects.narrator_voice_id` (one narrator voice per project, from the Voices library: built-in or custom). Without one, a voice is suggested (the TTS adapter's default).
+- **Writing:** the LLM step (Section 8.3 step 6), or typed by hand in the shot panel or the Timeline's Narration panel. Both save to `shots.narration`.
+- **Voicing:** one TTS job per shot with narration text, using the narrator voice at its natural pace (`speed` 0.8–1.2 for the whole film), no fitting to the clip (unlike dialogue). Jobs have `target_ref {kind: "shot", shot_id, slot: "narration"}`. A finished one becomes the shot's selected `narration` audio (same takes and "Use" switching as dialogue and SFX, one selected take per slot). The asset's `generation.text` records the text voiced.
+  - A line is **stale** when its selected take's text differs from `shots.narration`; the plan reports it so the UI can offer to re-voice it. Voicing skips shots that are empty, or already voiced and not stale, unless asked (`only_missing: false`).
+- **Placement:** a line starts `NARRATION_LEAD_S` (0.25 s) after the start of its shot's video clip, with `in_s = 0`, on the **Narration** audio track (`a_narration`), with the clip's `shot_id` set. It isn't trimmed or fitted: it may run past the end of its shot into the next one, but should not run into the next narration line.
+  - **Overflow:** per line, `overflow_s = max(0, end − next narration start)` (the timeline's end for the last line). The plan and the take report it; the UI warns and suggests a shorter line, a faster pace, or a longer shot.
+  - **Following the picture:** when a saved timeline moves a video clip (reorder, trim, transition change), narration clips with the same `shot_id` that were still at their anchor (`start_s` within 50 ms of the old clip start + lead) move with it. A narration clip the user dragged elsewhere is left alone. **Re-sync** re-anchors every narration clip. Auto-assemble places each shot's selected narration like its other audio.
+- **Ducking:** export lowers the Music and Sound-effects tracks (and the video clips' own sound) under the Narration track with a sidechain compressor (about 8 dB of reduction on speech, attack 20 ms, release 400 ms). It is on by default (`duck`) and applies only when the Narration track has unmuted clips. Dialogue is never ducked. The in-browser preview doesn't duck; the export is authoritative.
+- **Limits (v1):** one narrator per project, one line per shot (a line can't be attached to a scene), no word-level timing or captions, no lip-sync.
+
 ---
 
 ## 13. Asset library
@@ -714,13 +735,14 @@ JSON messages: `{type, ...}` where `type ∈ job.created | job.updated | job.pro
       { "id": "c1", "asset_id": "...", "start_s": 0.0, "in_s": 0.0, "out_s": 4.0,
         "transition_in": { "type": "cut|crossfade|fade_from_black", "duration_s": 0.5 },
         "shot_id": "..." } ] },
+    { "id": "a_narration", "kind": "audio", "name": "Narration", "clips": [ { "id": "...", "asset_id": "...", "start_s": 0.25, "in_s": 0.0, "out_s": 3.4, "gain_db": 0, "shot_id": "..." } ] },
     { "id": "a_dialogue", "kind": "audio", "clips": [ { "id": "...", "asset_id": "...", "start_s": 0.0, "in_s": 0.0, "out_s": 2.1, "gain_db": 0 } ] },
     { "id": "a_sfx", "kind": "audio", "clips": [] },
     { "id": "a_music", "kind": "audio", "clips": [] }
   ]
 }
 ```
-- v1: one video track (sequential, no overlaps except during transitions) and up to 3 audio tracks.
+- v1: one video track (sequential, no overlaps except during transitions) and up to 4 audio tracks: Narration, Dialogue, Sound effects, Music. Timelines saved before the Narration track existed get it on load (it sits first among the audio tracks).
   - Tracks also carry `name`, `muted` and `gain_db`. On the video track, `muted` mutes the clips' own sound.
   - The server derives video clips' `start_s` from their order, trims and crossfades, on the timeline's frame grid.
   - A crossfade is at most half the shorter neighbouring clip. A first clip can't crossfade, so it fades in from black instead.
@@ -739,6 +761,7 @@ JSON messages: `{type, ...}` where `type ∈ job.created | job.updated | job.pro
 - FFmpeg `filter_complex`: scale/pad every clip to project resolution and fps, apply trims, `xfade` for crossfades, `adelay` + `amix` for audio tracks with per-clip gain, loudness normalize (`loudnorm`, optional).
   - Clips whose aspect ratio is within 3% of the frame's are scaled and center-cropped instead of padded, so Wan's 1280×704 fills a 1280×720 frame.
   - Audio is mixed over silence of exactly the video's length.
+  - **Ducking** (`duck`, default true): when the Narration track has unmuted clips, the Music and Sound-effects tracks and the video clips' own sound are mixed first and run through `sidechaincompress` keyed by the narration, then mixed with the narration and dialogue (Section 12.3). Without narration, or with `duck` off, the mix is unchanged.
 - Output: MP4 H.264 + AAC. Presets: 720p/1080p (upscale is a plain scale in v1). Progress is parsed from `-progress pipe:1`.
 - Export creates an asset with `source="export"`.
 
@@ -804,6 +827,11 @@ LLM endpoints are synchronous request/response with a 120 s timeout. The UI show
 - `POST /shots/{id}/audio-plan` (the params) → `{clip_s, has_take, lines: [{speaker, line, voice_id, voice_name, voice_source, speed, estimated_s}], speech_s, fit_speed, fits, tts_model, sfx_prompt, v2a_model, selected, notes}`; queues nothing
 - `POST /shots/{id}/select-audio` `{asset_id, slot?}` → `{selected_audio_asset_ids}` (one take per part)
 - `POST /projects/{id}/generate-music` `{scope: "film"|"scene", scene_id?, prompt?, duration_s?, model_entry_id?, place? (default true)}` → `{job, prompt, duration_s, model_name, notes}`
+- `GET /projects/{id}/narration` → the narration plan: `{narrator: {voice_id, voice_name, source: "project"|"suggested"|"none"}, tts_model, speed, shots: [{shot_id, number, scene_title, duration_s, text, words, budget_words, estimated_s, status: "empty"|"text"|"voiced"|"stale", selected_asset_id, asset_duration_s, clip_start_s, start_s, overflow_s}], total_words, notes}` (`clip_start_s`: where the shot's clip starts on the timeline, null if it isn't placed; `start_s`: where its narration starts)
+- `POST /projects/{id}/narration/write` `{overwrite? (default false), style?, shot_ids?, llm?}` → `{updated: [{shot_id, text}], skipped, usage, warnings}`; saves into `shots.narration`
+- `POST /projects/{id}/narration/generate` `{shot_ids?, only_missing? (default true), speed? (0.8–1.2), tts_model_entry_id?, seed?}` → `{jobs, skipped: [{shot_id, reason}], plan}` (`409 no_tts_model`, `400 no_narration`)
+- `POST /projects/{id}/narration/resync` → the timeline (`TimelineOut`) with every narration clip re-anchored to its shot's clip
+- Narration text and the narrator voice are saved with `PATCH /shots/{id}` `{narration}` and `PATCH /projects/{id}` `{narrator_voice_id}`
 - `POST /shots/{id}/select` `{slot: "keyframe"|"end_keyframe"|"video"|"audio", asset_id}`
 - `POST /projects/{id}/generate-all` `{keyframes?, videos?, auto_approve_keyframes? (default: config), extend?, camera_intensity?}` → `{keyframe_jobs, video_jobs, skipped: [{shot_id, reason}]}`. Shots with a take or a running job are skipped; with auto-approve, each new keyframe is selected and its video queued (audio is generated per shot, from the shot panel)
 
@@ -826,7 +854,7 @@ LLM endpoints are synchronous request/response with a 120 s timeout. The UI show
 **Timeline & export**
 - `GET/PUT /projects/{id}/timeline` → `{project_id, timeline, duration_s, updated_at, notes}`. `PUT` takes the Section 15.1 object and returns it normalized: video clip `start_s` is derived, trims and transitions are clamped, and `notes` says what changed. Clips must use assets of this project, videos on the video track and audio on audio tracks (`400 invalid_asset`)
 - `POST /projects/{id}/timeline/auto-assemble` `{scene_transition?: "cut"|"crossfade", transition_s?, fade_in?, keep_music?}` → the timeline plus `skipped: [{shot_id, reason}]`
-- `POST /projects/{id}/export` `{preset: "720p"|"1080p", loudnorm?}` → job (`400 empty_timeline`). The job snapshots the timeline; the result is an asset with `source="export"` under `exports/`
+- `POST /projects/{id}/export` `{preset: "720p"|"1080p", loudnorm?, duck? (default true; Section 12.3)}` → job (`400 empty_timeline`). The job snapshots the timeline; the result is an asset with `source="export"` under `exports/`
 - Event `timeline.updated` `{project_id}`
 
 **Jobs**
@@ -861,7 +889,7 @@ Left sidebar: Projects, Cast library, Playground, Models, Settings. Top bar: cur
    - **Story:** idea textarea plus options (genre, tone, target length) and a "Cast" picker (project or library characters that must appear) → "Refine" → editable refined story → "Build bible" → "Break down into shots". Each step shows the LLM provider/model picker, token usage, and cost estimate. A revision history dropdown is available. Show a diff when re-running a step would overwrite edits; the user confirms.
    - **Ingredients:** cards grouped by kind; each has a name, editable visual prompt, candidate images, a primary selector, lock toggle, voice picker (characters), and attached LoRAs. The Characters group has "New character" (wizard, Section 11.7) and "Import" (library or another project) buttons. A character detail drawer shows views, character info, voice with audition, library sync status, and "Save as template".
    - **Shots board:** scenes as rows, shots as cards (drag to reorder within or across scenes). A card shows the selected keyframe/video thumbnail, status badge, duration, camera icon, and ingredient avatars. The shot detail panel has prompts (editable, with "AI rewrite"), mode selector, model selector with license badge, advanced params (auto-generated form from the adapter's JSON schema), camera preset, candidates gallery (keyframes, videos, audio) with select/compare, and actions: generate keyframe / video / audio, extend, variations.
-   - **Timeline:** Section 15.2, plus an Export button and export history.
+   - **Timeline:** Section 15.2, plus an Export button (with "lower music and effects under narration") and export history, and a **Narration** panel: the narrator voice and pace, **Write narration** (LLM), **Voice narration** (all lines that are missing or stale), **Re-sync**, and one row per shot with its editable line, a words-versus-budget hint, status (silent / not voiced / voiced / out of date), play, re-voice, and an overflow warning.
    - **Assets:** library (Section 13).
 3. **Cast library:** grid of library characters (primary image, name, voice), search, "New character", edit, delete, and "Cast into project…". Also a Voices tab to manage custom voices.
 4. **Playground:** standalone generation forms for every capability (useful for testing models).
@@ -939,6 +967,10 @@ Left sidebar: Projects, Cast library, Playground, Models, Settings. Top bar: cur
 - Asset library + collections, prompt rewrite, vision review (optional), diagnostics panel, README with setup steps (CUDA PyTorch install on Windows, ffmpeg, first-run walkthrough), Playwright smoke test.
 - ✅ A fresh clone can be set up by following the README. The E2E smoke test (fake engine + fake LLM) runs idea → breakdown → generate → assemble → export.
 
+**M8 — Narration** (added after M7; Section 12.3)
+- `shots.narration` and `projects.narrator_voice_id`, the `narration` LLM purpose and its template, narration voicing with takes, the Narration audio track with placement, overflow and follow-the-clip rules, ducking in export, the Timeline's Narration panel and the shot panel's narration field.
+- ✅ Writing narration for a 5-shot project fills a line per shot within its word budget (FakeLLMProvider test). Voicing puts one clip per line on the Narration track at its shot's start + 0.25 s. Reordering the video clips moves the untouched narration clips with their shots, and a hand-moved one stays. Editing a line marks its take stale. An export with narration and music has the music measurably quieter (≥ 6 dB) under the narration than without ducking, and unchanged when `duck` is off. On the RTX 5080, a real LLM write, a real Kokoro voicing and a real export work end to end.
+
 ---
 
 ## 21. Testing strategy
@@ -956,6 +988,7 @@ Left sidebar: Projects, Cast library, Playground, Models, Settings. Top bar: cur
 | 2 | Single user, localhost, no login | Per-launch token header only |
 | 3 | Inference via diffusers (no ComfyUI) | Adapters isolate this choice; a ComfyUI adapter could be added later |
 | 4 | Audio: native when available, else TTS + V2A + music | Lip-sync deferred |
+| 4a | Narration is one film-level voice (Section 12.3): text per shot, voiced on the Timeline | One narrator per project; scene-wide paragraphs, word-level timing and captions deferred |
 | 5 | Exact open model versions | Verified at implementation time (Section 0.2) |
 | 6 | 23 GB system RAM | Quantized 14B models only. Document that 64 GB RAM unlocks higher quality. |
 | 7 | Projects are not shared or synced | Export/import of projects (zip) is a post-v1 feature |

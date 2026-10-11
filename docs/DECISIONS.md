@@ -807,3 +807,53 @@ test. Test data made along the way was removed.
 7. **Left alone.** Draft Wan clips spend 23.5 of their 52 s decoding the video and about 8 s encoding the
    prompt; the unused negative prompt is still encoded. Both are future speed-ups. The scratch benchmarks and
    their clips are not part of the repo.
+
+## M8 — Narration
+
+1. **The shape: text per shot, voice on the Timeline.** Chosen over per-clip voicing and over one
+   whole-story block. Per-clip voice restarts the delivery at every cut and goes stale when the cut changes;
+   a single block can't be retimed. So the words live on the shots (`shots.narration`, written with the
+   picture in view) and each line is voiced separately, then placed by the Timeline. One project narrator
+   voice (`projects.narrator_voice_id`); a suggested voice stands in until one is chosen.
+2. **Narration is a third audio slot, not a new pipeline.** A narration take is an ordinary `tts` job whose
+   `target_ref.slot` is `narration`. `AudioGenService.on_job_assets` already selected a finished take for
+   its shot and synced the timeline clip; `SLOT_TRACK` gained `narration → a_narration` and that was all.
+   Takes, "Use" and in-place replacement work as for dialogue. `audio_slot()` still falls back to the job
+   type, so existing assets are untouched.
+3. **A fourth audio track, upgraded on load.** `MAX_AUDIO_TRACKS` is 4 and `a_narration` sits first among
+   the audio tracks. Stored timelines get it when they're read or saved (`with_narration_track`), so old
+   projects and old clients keep working. Tests index tracks by id because positions shifted.
+4. **Placement and the 0.25 s lead.** A line starts 0.25 s after its shot's clip and isn't trimmed to it
+   (dialogue is fitted to the clip; narration deliberately isn't: speech that is rushed to fit sounds worse
+   than speech that spills into the next shot). Overflow is measured against the next narrated line's start
+   (the film's end for the last one) and reported in the plan, with an estimate for lines that aren't
+   voiced yet (words ÷ 2.6 per second).
+5. **Following the picture.** `PUT /timeline` compares the new video clip starts with the saved ones
+   (`follow_video_moves`): a narration clip within 50 ms of its old anchor moves to the new one, anything
+   else is left alone. That distinguishes "the picture moved" from "the user placed this line", without a
+   flag on the clip. **Re-sync** is the explicit override. Auto-assemble places each shot's selected
+   narration like its other audio, on the right track (`audio_track_for`).
+6. **Stale takes.** An asset records its request, so a line is stale when its selected take's `params.text`
+   differs from `shots.narration`. No extra column; the plan computes it. Voicing only redoes missing or
+   stale lines unless `only_missing` is off.
+7. **Writing with the LLM.** A new `narration` purpose (template `narration.v1`). The prompt carries the
+   story, the cast's names and every shot in order with its duration, action, dialogue and a word budget
+   (`floor((duration − 0.6) × 2.3)`), and marks which shots to write; shots that already have narration are
+   shown as context and not changed. Output is `{lines: [{n, text}]}` keyed by the shot's position rather
+   than its ULID. Quotes are stripped, over-budget lines are kept but warned about, and it doesn't create a
+   story revision (it edits shots, like the board does). A shot the LLM leaves silent stays eligible for the
+   next write. `fake_llm` mode returns four lines for its five canned shots.
+8. **Ducking by sidechain, in the export only.** With narration on the timeline and `duck` on (the default),
+   `render.py` mixes the music, sound effects and the video clips' own sound into one bus and runs
+   `sidechaincompress` (threshold 0.03, ratio 5, attack 20 ms, release 400 ms) keyed by the narration
+   bus. Dialogue and narration aren't ducked. The narration bus is mixed over full-length silence so the
+   sidechain never ends before the music. Without narration, with `duck` off, or with nothing to duck, the
+   filter graph is exactly the old one. The browser preview doesn't duck (the export is authoritative).
+9. **Measured.** A synthetic test (a 1 kHz "voice" over a 440 Hz "music", real ffmpeg) asserts the music
+   dips at least 6 dB under the voice, recovers within 1.5 dB afterwards and leaves the voice unchanged.
+   On the RTX 5080, with gpt-5.4-mini, Kokoro and the real "The Last Rose" takes and music, the LLM wrote four
+   lines in 4 s (about $0.003, each exactly at its budget), Kokoro voiced them in 8 s, and solving the
+   stems out of the mix showed the music 8.6–11.2 dB down under each line and back to the plain level in
+   the gaps.
+10. **Left out of v1.** Scene-wide narration paragraphs (one line per shot), word-level timing and captions,
+    several narrators, and ducking in the browser preview.

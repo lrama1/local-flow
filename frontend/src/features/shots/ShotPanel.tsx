@@ -7,8 +7,9 @@ import { UsageLine } from "@/components/LlmPicker";
 import { MentionTextarea } from "@/components/MentionTextarea";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge, Input, Label, NativeSelect } from "@/components/ui/primitives";
+import { Badge, Input, Label, NativeSelect, Textarea } from "@/components/ui/primitives";
 import { ingredientOptions } from "@/features/characters/mentionOptions";
+import { budgetWords, wordCount } from "@/features/timeline/narration";
 import { cn } from "@/lib/utils";
 import { AudioSection } from "./AudioSection";
 import { CAMERA_MOVES, MODES, SHOT_TYPES } from "./constants";
@@ -29,7 +30,7 @@ type Draft = Pick<
   | "ingredient_ids"
   | "dialogue"
   | "continuity_notes"
-> & { end_keyframe_prompt: string; sfx_prompt: string; music_cue: string };
+> & { end_keyframe_prompt: string; sfx_prompt: string; music_cue: string; narration: string };
 
 function toDraft(s: Shot): Draft {
   return {
@@ -43,6 +44,7 @@ function toDraft(s: Shot): Draft {
     generation_mode: s.generation_mode,
     ingredient_ids: s.ingredient_ids,
     dialogue: s.dialogue,
+    narration: s.narration,
     sfx_prompt: s.sfx_prompt ?? "",
     music_cue: s.music_cue ?? "",
     continuity_notes: s.continuity_notes,
@@ -410,6 +412,20 @@ export function ShotPanel({
             <PlusIcon />
             Add line
           </Button>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="sh-narr">Narration (voice-over; leave empty for a silent shot)</Label>
+          <Textarea
+            id="sh-narr"
+            rows={2}
+            value={draft.narration}
+            onChange={(e) => set("narration", e.target.value)}
+          />
+          <p className="text-muted-foreground text-xs">
+            {wordCount(draft.narration)} / {budgetWords(draft.duration_s)} words for a {draft.duration_s} s
+            shot. It is voiced from the Timeline tab.
+          </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">

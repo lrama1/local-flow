@@ -376,6 +376,10 @@ test("exports with the chosen preset and lists finished exports", async () => {
   await userEvent.click(screen.getByLabelText("Normalize loudness"));
   await userEvent.click(screen.getByRole("button", { name: "Export MP4" }));
   await waitFor(() =>
-    expect(calls.find((c) => c.path.endsWith("/export"))?.body).toEqual({ preset: "1080p", loudnorm: true }),
+    expect(calls.find((c) => c.path.endsWith("/export"))?.body).toEqual({
+      preset: "1080p",
+      loudnorm: true,
+      duck: true,
+    }),
   );
 });

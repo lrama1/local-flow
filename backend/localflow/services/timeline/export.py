@@ -146,7 +146,9 @@ class ExportRunner:
     # --- the export itself (worker thread) --------------------------------------------------------
     def _export(self, job: Job, event: threading.Event) -> Asset:
         assert job.project_id is not None
-        body = ExportBody.model_validate({k: job.params_json[k] for k in ("preset", "loudnorm")})
+        body = ExportBody.model_validate(
+            {k: job.params_json[k] for k in ("preset", "loudnorm", "duck") if k in job.params_json}
+        )
         tl = TimelineData.model_validate(job.params_json["timeline"])
         sources: dict[str, Source] = {}
         for c in (c for t in tl.tracks for c in t.clips):
@@ -166,7 +168,7 @@ class ExportRunner:
         tmp = Path(self.settings.tmp_dir)
         tmp.mkdir(parents=True, exist_ok=True)
         dst = tmp / f"export-{job.id}.mp4"
-        plan = build_export(tl, sources, body.preset, dst, loudnorm=body.loudnorm)
+        plan = build_export(tl, sources, body.preset, dst, loudnorm=body.loudnorm, duck=body.duck)
         self.jobs.progress(job.id, 0.0, f"Encoding {plan.width}x{plan.height}…")
 
         def progress(f: float) -> None:
@@ -193,6 +195,7 @@ class ExportRunner:
             "job_type": "export",
             "preset": body.preset,
             "loudnorm": body.loudnorm,
+            "duck": body.duck,
             "timeline_duration_s": plan.duration_s,
             "clips": len(tl.video.clips),
             "timeline": job.params_json["timeline"],

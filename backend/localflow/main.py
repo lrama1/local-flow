@@ -27,6 +27,7 @@ from localflow.routers import (
     generate,
     imagegen,
     jobs,
+    narration,
     projects,
     story,
     system,
@@ -103,6 +104,7 @@ def create_app(settings: Settings | None = None, **service_hooks: Any) -> FastAP
         video.router,
         timeline.router,
         voices.router,
+        narration.router,
         characters.router,
         events.router,
     ):

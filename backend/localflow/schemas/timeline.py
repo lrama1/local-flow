@@ -12,7 +12,7 @@ TransitionType = Literal["cut", "crossfade", "fade_from_black"]
 TrackKind = Literal["video", "audio"]
 ExportPreset = Literal["720p", "1080p"]
 
-MAX_AUDIO_TRACKS = 3
+MAX_AUDIO_TRACKS = 4
 
 
 def clip_id() -> str:
@@ -127,3 +127,6 @@ class ExportBody(BaseModel):
 
     preset: ExportPreset = "720p"
     loudnorm: bool = Field(default=False, description="EBU R128 loudness normalization (-16 LUFS)")
+    duck: bool = Field(
+        default=True, description="Lower music and effects under the narration (when it has clips)"
+    )

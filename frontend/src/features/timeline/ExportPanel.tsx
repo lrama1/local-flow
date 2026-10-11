@@ -28,6 +28,7 @@ export function ExportPanel({
 }) {
   const [preset, setPreset] = useState<ExportPreset>("720p");
   const [loudnorm, setLoudnorm] = useState(false);
+  const [duck, setDuck] = useState(true);
   const [viewing, setViewing] = useState<Asset | null>(null);
   const run = useExportTimeline(projectId);
   const cancel = useCancelJob();
@@ -38,7 +39,7 @@ export function ExportPanel({
 
   const start = async () => {
     await beforeExport();
-    run.mutate({ preset, loudnorm });
+    run.mutate({ preset, loudnorm, duck });
   };
   const error = run.error && (run.error as ApiError).code !== "license_not_acknowledged" ? run.error : null;
 
@@ -67,6 +68,13 @@ export function ExportPanel({
         <Label className="flex items-center gap-1.5 text-xs font-normal">
           <input type="checkbox" checked={loudnorm} onChange={(e) => setLoudnorm(e.target.checked)} />
           Normalize loudness
+        </Label>
+        <Label
+          className="flex items-center gap-1.5 text-xs font-normal"
+          title="Music and effects dip while the narration speaks (applied in the export, not the preview)"
+        >
+          <input type="checkbox" checked={duck} onChange={(e) => setDuck(e.target.checked)} />
+          Lower music under narration
         </Label>
         <Button
           size="sm"

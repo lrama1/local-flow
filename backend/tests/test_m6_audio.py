@@ -28,7 +28,7 @@ from localflow.worker.adapters.speech import (
 )
 from tests.conftest import TOKEN, make_settings, wait_for, wait_job, wait_worker_idle
 from tests.test_m3_imagegen import ok
-from tests.test_m5_timeline import FFPROBE, fake_video, streams
+from tests.test_m5_timeline import FFPROBE, fake_video, streams, track
 
 DESIGN = {
     "base_weight": 0.7,
@@ -366,7 +366,7 @@ def test_shot_dialogue_and_sfx_align_to_the_clip_and_export(c: TestClient) -> No
     new_id = done(c, again["jobs"][0])["result"]["asset_ids"][0]
     assert selected_audio(c, pid, shot_id) == [sfx_id, new_id]
     tl = ok(c, "GET", f"/api/projects/{pid}/timeline")["timeline"]
-    assert [x["asset_id"] for x in tl["tracks"][1]["clips"]] == [new_id]
+    assert [x["asset_id"] for x in track(tl, "a_dialogue")] == [new_id]
     # ...and the old take can be picked again.
     ok(c, "POST", f"/api/shots/{shot_id}/select-audio", json={"asset_id": dialogue_id})
     assert selected_audio(c, pid, shot_id) == [sfx_id, dialogue_id]
@@ -445,9 +445,9 @@ def test_music_from_cues_is_placed_on_the_music_track(c: TestClient) -> None:
         take2["duration_s"], abs=0.01
     )
     scene_asset = done(c, two["job"])["result"]["asset_ids"][0]
-    music = ok(c, "GET", f"/api/projects/{pid}/timeline")["timeline"]["tracks"][3]["clips"]
+    music = track(ok(c, "GET", f"/api/projects/{pid}/timeline")["timeline"], "a_music")
     starts = {x["asset_id"]: x["start_s"] for x in music}
-    v1 = ok(c, "GET", f"/api/projects/{pid}/timeline")["timeline"]["tracks"][0]["clips"]
+    v1 = track(ok(c, "GET", f"/api/projects/{pid}/timeline")["timeline"], "v1")
     assert starts == {film_asset: 0, scene_asset: pytest.approx(v1[1]["start_s"], abs=0.01)}
     r = c.post(f"/api/projects/{pid}/generate-music", json={"scope": "scene", "scene_id": "nope"})
     assert r.status_code == 400 and r.json()["error"]["code"] == "invalid_scene"

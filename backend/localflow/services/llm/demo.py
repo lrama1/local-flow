@@ -142,6 +142,17 @@ VOICE_DESIGN: dict[str, Any] = {
 
 VISION_REVIEW: dict[str, Any] = {"consistent": True, "issues": [], "suggested_prompt_fix": ""}
 
+# One line per shot of BREAKDOWN, in order, within each shot's word budget (the second shot has dialogue).
+NARRATION: dict[str, Any] = {
+    "lines": [
+        {"n": 1, "text": "Mara walks the rocks at dusk."},
+        {"n": 2, "text": ""},
+        {"n": 3, "text": "All night she works, as the storm rages."},
+        {"n": 4, "text": "By morning, a message arrives."},
+        {"n": 5, "text": "Some letters change everything."},
+    ]
+}
+
 
 def demo_script() -> dict[str, list[Any]]:
     """One response per purpose (repeated for every call)."""
@@ -154,4 +165,5 @@ def demo_script() -> dict[str, list[Any]]:
         "character_describe": [DESCRIPTION],
         "voice_design": [VOICE_DESIGN],
         "vision_review": [VISION_REVIEW],
+        "narration": [NARRATION],
     }

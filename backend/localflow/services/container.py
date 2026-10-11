@@ -22,6 +22,7 @@ from localflow.services.jobs.service import JobService
 from localflow.services.jobs.supervisor import WorkerSupervisor
 from localflow.services.keys import Checker, KeyService
 from localflow.services.llm.service import LLMService, ProviderFactory
+from localflow.services.narration import NarrationService
 from localflow.services.projects import ProjectService
 from localflow.services.registry.civitai import CivitaiClient
 from localflow.services.registry.downloads import DownloadRunner
@@ -64,6 +65,7 @@ class Services:
     audiogen: AudioGenService
     collections: CollectionService
     review: ReviewService
+    narration: NarrationService
 
 
 def build_services(
@@ -133,6 +135,7 @@ def build_services(
     )
     generation.mention_resolver = characters.resolve_for_generation
     exports = ExportRunner(settings, jobs, assets, timeline, bus)
+    narration = NarrationService(db, llm, story, board, voices, generation, registry, timeline)
     return Services(
         settings,
         db,
@@ -160,6 +163,7 @@ def build_services(
         audiogen,
         CollectionService(db, bus),
         ReviewService(settings, assets, imagegen, llm),
+        narration,
     )
 
 

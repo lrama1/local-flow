@@ -16,6 +16,7 @@ Purpose = Literal[
     "character_describe",
     "voice_design",
     "vision_review",
+    "narration",
 ]
 PURPOSES: tuple[Purpose, ...] = (
     "refine",
@@ -26,6 +27,7 @@ PURPOSES: tuple[Purpose, ...] = (
     "character_describe",
     "voice_design",
     "vision_review",
+    "narration",
 )
 
 
