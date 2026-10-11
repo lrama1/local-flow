@@ -249,6 +249,20 @@ class SecretStore:
     def stored_source(self) -> SecretSource:
         return self._store.source
 
+    def backend_name(self) -> str:
+        """Where pasted keys are kept, for diagnostics (e.g. "Windows WinVaultKeyring")."""
+        if isinstance(self._store, KeyringStore):
+            try:
+                import keyring
+
+                kr = keyring.get_keyring()
+                return str(getattr(kr, "name", None) or type(kr).__name__)
+            except Exception as e:
+                return f"OS keyring (unavailable: {type(e).__name__})"
+        if isinstance(self._store, EncryptedFileStore):
+            return "Encrypted file in the data folder (no OS keyring found)"
+        return "In memory (not saved)"
+
     def resolve(self, name: str) -> ResolvedSecret | None:
         d = SECRET_DEFS[name]
         if self._env is not None:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 from typing import Literal
 
@@ -49,7 +50,10 @@ async def _save_upload(svc: Services, project_id: str, file: UploadFile, generat
                 fh.write(chunk)
         if size == 0:
             raise AppError(400, "empty_upload", "The uploaded file is empty.")
-        return svc.assets.ingest_upload(project_id, tmp, file.filename or "upload", generation=generation)
+        # Probing, transcoding and thumbnails can take a while: keep them off the event loop.
+        return await asyncio.to_thread(
+            svc.assets.ingest_upload, project_id, tmp, file.filename or "upload", generation=generation
+        )
     finally:
         with contextlib.suppress(OSError):
             tmp.unlink(missing_ok=True)

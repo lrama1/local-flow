@@ -1,14 +1,24 @@
 import { FileAudioIcon } from "lucide-react";
+import type { Ref } from "react";
 import { withToken, type Asset } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 /** Full-size playable/viewable media for an asset. */
-export function MediaPlayer({ asset, className }: { asset: Asset; className?: string }) {
+export function MediaPlayer({
+  asset,
+  className,
+  videoRef,
+}: {
+  asset: Asset;
+  className?: string;
+  videoRef?: Ref<HTMLVideoElement>;
+}) {
   const src = withToken(asset.url);
   if (asset.type === "video") {
     return (
       <video
         key={asset.id}
+        ref={videoRef}
         src={src}
         poster={withToken(asset.thumb_url)}
         controls

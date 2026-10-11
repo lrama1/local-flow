@@ -200,7 +200,8 @@ def concat_args(
 
 
 def probe(ffprobe: str | None, path: Path) -> dict[str, Any]:
-    """Return {width, height, duration_s, fps, has_audio, has_video, num_frames} for a media file."""
+    """Return {width, height, duration_s, fps, has_audio, has_video, num_frames, video_codec, pix_fmt,
+    audio_codec} for a media file."""
     if not ffprobe:
         raise FFmpegError("ffprobe not found. Install ffmpeg or set ffprobe_path in config.toml.")
     out = subprocess.run(
@@ -226,6 +227,9 @@ def probe(ffprobe: str | None, path: Path) -> dict[str, Any]:
         "fps": None,
         "num_frames": None,
         "duration_s": None,
+        "video_codec": video.get("codec_name") if video else None,
+        "pix_fmt": video.get("pix_fmt") if video else None,
+        "audio_codec": audio.get("codec_name") if audio else None,
     }
     duration = data.get("format", {}).get("duration")
     if duration is not None:

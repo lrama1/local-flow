@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import shutil
 from pathlib import Path
@@ -13,9 +14,27 @@ from sqlmodel import col, func, select
 from localflow.config import Settings
 from localflow.db import Database
 from localflow.errors import AppError, not_found
-from localflow.models import Asset, Ingredient, IngredientAsset, Job, Project, Shot, new_id, utcnow
+from localflow.models import (
+    Asset,
+    CollectionAsset,
+    Ingredient,
+    IngredientAsset,
+    Job,
+    Project,
+    Scene,
+    Shot,
+    new_id,
+    utcnow,
+)
 from localflow.services.board import derived_status
-from localflow.services.media.ffmpeg import FFmpegError, image_thumbnail, probe, video_thumbnail
+from localflow.services.media.ffmpeg import (
+    FFmpegError,
+    extract_frame,
+    image_thumbnail,
+    probe,
+    run_ffmpeg,
+    video_thumbnail,
+)
 from localflow.services.timeline.service import drop_asset_clips
 from localflow.worker.messages import OutputFile
 
@@ -70,10 +89,18 @@ class AssetService:
         q: str | None = None,
         target: dict[str, str] | None = None,
         source: str | None = None,
+        collection_id: str | None = None,
+        model: str | None = None,
+        scene_id: str | None = None,
+        featuring: str | None = None,
+        oldest_first: bool = False,
         offset: int = 0,
         limit: int = 50,
     ) -> tuple[list[Asset], int]:
-        """`target` filters on the generating job's target_ref, e.g. {"ingredient_id": ...} (candidates)."""
+        """`target` filters on the generating job's target_ref, e.g. {"ingredient_id": ...} (candidates).
+        Library filters (Section 13): `collection_id`; `model` (a model entry id or name); `scene_id` (made
+        for a shot of that scene); `featuring` (an ingredient id: its candidates, prompts that @mention it,
+        and assets made for shots it's in); `q` searches prompts, dialogue, file names and tags."""
         with self.db.session() as s:
             stmt = select(Asset).where(Asset.project_id == project_id)
             if type_:
@@ -82,8 +109,32 @@ class AssetService:
                 stmt = stmt.where(Asset.source == source)
             if favorite is not None:
                 stmt = stmt.where(Asset.favorite == favorite)
-            rows = list(s.exec(stmt.order_by(col(Asset.id).desc())).all())
-        # tag/q filters operate on JSON columns; filtering in Python keeps SQL portable.
+            if collection_id:
+                members = select(CollectionAsset.asset_id).where(
+                    CollectionAsset.collection_id == collection_id
+                )
+                stmt = stmt.where(col(Asset.id).in_(members))
+            order = col(Asset.id).asc() if oldest_first else col(Asset.id).desc()
+            rows = list(s.exec(stmt.order_by(order)).all())
+            scene_shots: set[str] | None = None
+            if scene_id:
+                scene_shots = {sh.id for sh in s.exec(select(Shot).where(Shot.scene_id == scene_id))}
+            feature: tuple[str, str, set[str]] | None = None
+            if featuring:
+                ing = s.get(Ingredient, featuring)
+                if ing is None or ing.project_id != project_id:
+                    return [], 0
+                shots = s.exec(
+                    select(Shot)
+                    .join(Scene, col(Scene.id) == col(Shot.scene_id))
+                    .where(Scene.project_id == project_id)
+                ).all()
+                feature = (
+                    ing.id,
+                    ing.key,
+                    {sh.id for sh in shots if ing.id in (sh.ingredient_ids_json or [])},
+                )
+        # JSON-column filters run in Python: portable, and fine at a project's scale.
         if tag:
             rows = [a for a in rows if tag in a.tags_json]
         if target:
@@ -95,12 +146,62 @@ class AssetService:
                 return all(actual.get(k) == v for k, v in target.items())
 
             rows = [a for a in rows if hit(a)]
+        if model:
+            rows = [
+                a
+                for a in rows
+                if model in (a.generation_json.get("model_entry_id"), a.generation_json.get("model_name"))
+            ]
+        if scene_shots is not None:
+            rows = [
+                a for a in rows if (a.generation_json.get("target_ref") or {}).get("shot_id") in scene_shots
+            ]
+        if feature is not None:
+            ing_id, key, shots_with = feature
+
+            def features(a: Asset) -> bool:
+                gen = a.generation_json
+                ref = gen.get("target_ref") or {}
+                return (
+                    ref.get("ingredient_id") == ing_id
+                    or key in (gen.get("mentions") or [])
+                    or ref.get("shot_id") in shots_with
+                )
+
+            rows = [a for a in rows if features(a)]
         if q:
             ql = q.lower()
-            rows = [
-                a for a in rows if ql in str(a.generation_json.get("params", {}).get("prompt", "")).lower()
-            ]
+            rows = [a for a in rows if ql in search_text(a)]
         return rows[offset : offset + limit], len(rows)
+
+    def facets(self, project_id: str) -> dict[str, Any]:
+        """Values to filter the library by, with counts: types, sources, tags, models, favorites."""
+        with self.db.session() as s:
+            rows = list(s.exec(select(Asset).where(Asset.project_id == project_id)).all())
+        types: dict[str, int] = {}
+        sources: dict[str, int] = {}
+        tags: dict[str, int] = {}
+        models: dict[str, dict[str, Any]] = {}
+        for a in rows:
+            types[a.type] = types.get(a.type, 0) + 1
+            sources[a.source] = sources.get(a.source, 0) + 1
+            for t in a.tags_json:
+                tags[t] = tags.get(t, 0) + 1
+            gen = a.generation_json
+            key = gen.get("model_entry_id") or gen.get("model_name")
+            if key:
+                m = models.setdefault(
+                    str(key), {"model": str(key), "name": gen.get("model_name") or key, "count": 0}
+                )
+                m["count"] += 1
+        return {
+            "total": len(rows),
+            "favorites": sum(1 for a in rows if a.favorite),
+            "types": types,
+            "sources": sources,
+            "tags": [{"tag": t, "count": n} for t, n in sorted(tags.items(), key=lambda kv: (-kv[1], kv[0]))],
+            "models": sorted(models.values(), key=lambda m: -int(m["count"])),
+        }
 
     def latest_thumb(self, project_id: str) -> Asset | None:
         with self.db.session() as s:
@@ -199,12 +300,74 @@ class AssetService:
         *,
         generation: dict[str, Any] | None = None,
     ) -> Asset:
-        """Validates an uploaded file by content (Pillow / ffprobe, not the extension), then ingests it."""
+        """Validates an uploaded file by content (Pillow / ffprobe, not the extension), normalizes it for
+        playback and editing (Section 13), then ingests it. Blocking: run it in a thread."""
         type_, ext = self._sniff(src, Path(filename).suffix.lower())
         named = src.with_name(f"{src.stem}{ext}")
         src.replace(named)
         gen = {"uploaded_name": Path(filename).name[:200], **(generation or {})}
-        return self.ingest_file(project_id, named, type_, source="uploaded", generation=gen)
+        try:
+            try:
+                normalized, note = self._normalize(named, type_)
+            except FFmpegError as e:
+                raise AppError(
+                    422, "convert_failed", f"Couldn't convert the {type_} for playback: {str(e)[:300]}"
+                ) from e
+            if note:
+                gen["normalized"] = note
+            return self.ingest_file(project_id, normalized, type_, source="uploaded", generation=gen)
+        finally:
+            # The upload and any (partial) converted copy; the ingested file is a copy in the project.
+            for p in (named, *(named.with_name(f"{named.stem}.norm{x}") for x in (".mp4", ".wav"))):
+                with contextlib.suppress(OSError):
+                    p.unlink(missing_ok=True)
+
+    _BROWSER_AUDIO = {"pcm_s16le", "pcm_s24le", "pcm_f32le", "aac", "mp3", "opus", "vorbis", "flac"}
+
+    def _normalize(self, path: Path, type_: str) -> tuple[Path, str | None]:
+        """Video → H.264/yuv420p MP4 (AAC audio), remuxing when the streams already fit; mp3/flac/ogg audio
+        → WAV. Returns the file to ingest and a note on what changed (None: kept as uploaded)."""
+        if type_ == "image":
+            return path, None
+        info = probe(self.settings.ffprobe, path)
+        if type_ == "audio":
+            if path.suffix in (".wav", ".m4a", ".aac"):
+                return path, None
+            out = path.with_name(f"{path.stem}.norm.wav")
+            run_ffmpeg(self.settings.ffmpeg, ["-i", str(path), "-vn", "-c:a", "pcm_s16le", str(out)])
+            return out, f"{path.suffix[1:]} → wav"
+        h264 = info.get("video_codec") == "h264" and info.get("pix_fmt") in ("yuv420p", "yuvj420p")
+        audio_ok = not info.get("has_audio") or info.get("audio_codec") == "aac"
+        if h264 and audio_ok and path.suffix == ".mp4":
+            return path, None
+        out = path.with_name(f"{path.stem}.norm.mp4")
+        # yuv420p H.264 needs even dimensions: an odd width or height loses its last pixel row/column.
+        even = ["-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2"]
+        video = (
+            ["-c:v", "copy"]
+            if h264
+            else [*even, "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p"]
+        )
+        audio = ["-c:a", "copy"] if audio_ok else ["-c:a", "aac", "-b:a", "192k"]
+        run_ffmpeg(
+            self.settings.ffmpeg,
+            [
+                "-i",
+                str(path),
+                "-map",
+                "0:v:0",
+                "-map",
+                "0:a:0?",
+                *video,
+                *audio,
+                "-movflags",
+                "+faststart",
+                str(out),
+            ],
+            total_s=info.get("duration_s"),
+        )
+        src = f"{path.suffix[1:]}/{info.get('video_codec')}"
+        return out, f"{src} → mp4/h264" if not h264 else f"{src} remuxed to mp4"
 
     _VIDEO_EXT = (".mp4", ".mov", ".webm", ".mkv", ".m4v")
     _AUDIO_EXT = (".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac")
@@ -273,6 +436,28 @@ class AssetService:
             )
         return assets
 
+    def extract_frame(self, asset_id: str, time_s: float) -> Asset:
+        """A still from a video at `time_s` (clamped to the last frame) as a new image asset."""
+        video = self.get(asset_id)
+        if video.type != "video":
+            raise AppError(400, "not_a_video", "Frames can only be extracted from videos.")
+        fps = video.fps or 24.0
+        last = max(0.0, (video.duration_s or 0.0) - 1.0 / fps)
+        at = round(min(max(0.0, time_s), last) * fps) / fps  # on the frame grid
+        tmp = self.settings.tmp_dir / "frames" / f"{new_id()}.png"
+        try:
+            # Seek half a frame early: ffmpeg drops frames before the (millisecond-rounded) seek time, so
+            # seeking to exactly k/fps rounded up (1/24 → "0.042") would return frame k + 1.
+            extract_frame(self.settings.ffmpeg, self.file_path(video), tmp, at_s=max(0.0, at - 0.5 / fps))
+        except FFmpegError as e:
+            raise AppError(500, "extract_failed", f"Couldn't extract the frame: {e}") from e
+        if not tmp.is_file():
+            raise AppError(400, "extract_failed", "No frame at that time.")
+        generation = {"extracted_from": video.id, "time_s": round(at, 4), "frame": round(at * fps)}
+        return self.ingest_file(
+            video.project_id, tmp, "image", source="extracted", generation=generation, parents=[video.id]
+        )
+
     def update(self, asset_id: str, *, tags: list[str] | None, favorite: bool | None) -> Asset:
         with self.db.session() as s:
             a = s.get(Asset, asset_id)
@@ -311,6 +496,15 @@ class AssetService:
                     shot.reference_asset_ids_json = kept or None  # nothing left → automatic again
                     s.add(shot)
                     changed.add("board")
+            if a.type == "audio":
+                for shot in s.exec(select(Shot)).all():
+                    if asset_id in (shot.selected_audio_asset_ids_json or []):
+                        shot.selected_audio_asset_ids_json = [
+                            x for x in shot.selected_audio_asset_ids_json if x != asset_id
+                        ]
+                        shot.updated_at = utcnow()
+                        s.add(shot)
+                        changed.add("board")
             shots = s.exec(
                 select(Shot).where(
                     (Shot.selected_keyframe_asset_id == asset_id)
@@ -341,6 +535,23 @@ class AssetService:
         d = self.project_dir(project_id)
         if d.exists():
             shutil.rmtree(d)
+
+
+def search_text(a: Asset) -> str:
+    """What the library's search box matches: prompts (raw and resolved), spoken text, the uploaded file's
+    name, the model, and tags."""
+    gen = a.generation_json or {}
+    params = gen.get("params") or {}
+    parts = [
+        params.get("prompt"),
+        params.get("text"),
+        gen.get("prompt_raw"),
+        gen.get("uploaded_name"),
+        gen.get("model_name"),
+        *(ln.get("text") for ln in params.get("lines") or [] if isinstance(ln, dict)),
+        *a.tags_json,
+    ]
+    return " ".join(str(p) for p in parts if p).lower()
 
 
 def _input_asset_ids(request: dict[str, Any]) -> list[str]:

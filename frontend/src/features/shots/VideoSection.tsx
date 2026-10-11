@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
+import { useShotReferences } from "@/api/characters";
 import type { ApiError, Asset, Shot } from "@/api/client";
 import { fileUrl, thumbUrl, useSelectForShot } from "@/api/imagegen";
 import { useCancelJob, useJobs } from "@/api/queries";
@@ -31,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Badge, Label, NativeSelect } from "@/components/ui/primitives";
 import { gateLicense } from "@/features/models/gateLicense";
 import { cn, formatDuration } from "@/lib/utils";
+import { ReviewCheck, type PromptField } from "./ReviewCheck";
 import { segmentsFor, shotVideoJobs } from "./video";
 
 const MODES: { value: VideoMode; label: string }[] = [
@@ -49,11 +51,14 @@ export function VideoSection({
   shot,
   projectId,
   beforeGenerate,
+  onApplyFix,
 }: {
   shot: Shot;
   projectId: string;
   /** Saves unsaved panel edits first, so the video uses the prompts on screen. */
   beforeGenerate?: () => Promise<unknown>;
+  /** Puts a vision-review prompt fix into the panel's draft. */
+  onApplyFix?: (field: PromptField, text: string) => void;
 }) {
   const [mode, setMode] = useState<VideoMode>("auto");
   const [modelId, setModelId] = useState<string | null>(null);
@@ -77,6 +82,8 @@ export function VideoSection({
 
   const takes = takesPage?.items ?? [];
   const selectedId = shot.selected_video_asset_id;
+  // The saved shot's references: what a consistency check compares the take with.
+  const { data: refs } = useShotReferences(shot.id, shot.shot_type, shot.ingredient_ids);
   const { active, failed } = shotVideoJobs(jobsPage?.items, shot.id);
   const needed = segmentsFor(shot, plan.data);
   const extendCount = extendAfter ?? needed;
@@ -165,6 +172,15 @@ export function VideoSection({
           </div>
         )}
       </div>
+      {selectedId && (refs?.selected.length ?? 0) > 0 && (
+        <ReviewCheck
+          shotId={shot.id}
+          assetId={selectedId}
+          what="take"
+          beforeReview={beforeGenerate}
+          onApplyFix={onApplyFix}
+        />
+      )}
 
       {plan.data && (
         <div className="space-y-1">

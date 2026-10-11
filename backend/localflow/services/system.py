@@ -70,7 +70,15 @@ def _ffmpeg_version(ffmpeg: str | None) -> str | None:
     return parts[2] if len(parts) > 2 else None
 
 
-def _dist_version(name: str) -> str | None:
+def gpu_info() -> GpuInfo | None:
+    return _cached("gpu", 2.0, _gpu)
+
+
+def ffmpeg_version(ffmpeg: str | None) -> str | None:
+    return _cached("ffmpeg", 300.0, lambda: _ffmpeg_version(ffmpeg))
+
+
+def dist_version(name: str) -> str | None:
     try:
         return metadata.version(name)
     except metadata.PackageNotFoundError:
@@ -79,13 +87,14 @@ def _dist_version(name: str) -> str | None:
 
 def system_status(settings: Settings, worker: WorkerInfo) -> SystemStatus:
     mem = psutil.virtual_memory()
+    runtime = worker.runtime or {}
     try:
         disk_free = shutil.disk_usage(settings.data_dir).free // (1024 * 1024)
     except OSError:
         disk_free = None
     return SystemStatus(
         version=__version__,
-        gpu=_cached("gpu", 2.0, _gpu),
+        gpu=gpu_info(),
         ram_used_mb=int((mem.total - mem.available) / (1024 * 1024)),
         ram_total_mb=int(mem.total / (1024 * 1024)),
         disk_free_mb=disk_free,
@@ -93,11 +102,12 @@ def system_status(settings: Settings, worker: WorkerInfo) -> SystemStatus:
         worker=worker,
         ffmpeg_found=settings.ffmpeg is not None,
         ffprobe_found=settings.ffprobe is not None,
-        ffmpeg_version=_cached("ffmpeg", 300.0, lambda: _ffmpeg_version(settings.ffmpeg)),
+        ffmpeg_version=ffmpeg_version(settings.ffmpeg),
         python_version=platform.python_version(),
-        torch_version=_dist_version("torch"),
-        cuda_version=None,  # reported by the worker once real adapters exist (M3)
-        diffusers_version=_dist_version("diffusers"),
+        torch_version=runtime.get("torch") or dist_version("torch"),
+        cuda_version=runtime.get("cuda"),
+        cuda_available=runtime.get("cuda_available"),
+        diffusers_version=dist_version("diffusers"),
         vram_profile=settings.vram_profile,
         dev_mode=settings.dev_mode,
     )

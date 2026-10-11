@@ -43,6 +43,24 @@ class Asset(IdMixin, TimestampMixin, table=True):
     favorite: bool = False
 
 
+class Collection(IdMixin, TimestampMixin, table=True):
+    """A user-defined group of a project's assets (Section 13)."""
+
+    __tablename__ = "collections"
+
+    project_id: str = Field(foreign_key="projects.id", index=True, ondelete="CASCADE")
+    name: str
+    description: str = ""
+
+
+class CollectionAsset(IdMixin, TimestampMixin, table=True):
+    __tablename__ = "collection_assets"
+    __table_args__ = (UniqueConstraint("collection_id", "asset_id"),)
+
+    collection_id: str = Field(foreign_key="collections.id", index=True, ondelete="CASCADE")
+    asset_id: str = Field(foreign_key="assets.id", index=True, ondelete="CASCADE")
+
+
 class Job(IdMixin, TimestampMixin, table=True):
     __tablename__ = "jobs"
 

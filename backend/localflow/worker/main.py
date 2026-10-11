@@ -14,7 +14,7 @@ from typing import Any
 from localflow.logging_setup import setup_logging
 from localflow.services.media.ffmpeg import FFmpegCancelled
 from localflow.worker.context import JobCancelled, JobContext
-from localflow.worker.engine import Engine
+from localflow.worker.engine import Engine, torch_runtime
 from localflow.worker.messages import (
     CancelRequest,
     JobEvent,
@@ -138,6 +138,7 @@ def worker_main(config: WorkerConfig, job_q: Any, control_q: Any, event_q: Any) 
                 "engine": engine.engine,
                 "engine_note": engine.reason,
                 "vram_baseline": engine.cache.baseline,
+                "runtime": torch_runtime(),
             },
         )
     )

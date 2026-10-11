@@ -32,6 +32,7 @@ from localflow.services.secrets import LLM_SECRET, SECRET_DEFS
 log = logging.getLogger("localflow.llm")
 
 ProviderFactory = Callable[[ProviderName, str], LLMProvider]
+FAKE_AS: ProviderName = "openai"  # the provider name the fake LLM answers as
 DEFAULTS_KEY = "llm_defaults"
 MODELS_TTL_S = 600.0
 
@@ -76,6 +77,15 @@ class LLMService:
         self.settings = settings
         self.db = db
         self.keys = keys
+        # Fake mode (config `fake_llm`): one canned-response provider stands in for OpenAI; keys are ignored.
+        self.fake = settings.fake_llm
+        if self.fake and factory is None:
+            from localflow.services.llm.demo import demo_script
+            from localflow.services.llm.fake import FakeLLMProvider
+
+            demo = FakeLLMProvider(demo_script(), max_repairs=settings.llm_max_repairs)
+            factory = lambda name, key: demo  # noqa: E731
+            log.warning("fake_llm is on: LLM features return canned demo responses")
         self._factory: ProviderFactory = factory or (
             lambda name, key: LiteLLMProvider(
                 name, key, timeout_s=settings.llm_timeout_s, max_repairs=settings.llm_max_repairs
@@ -85,13 +95,19 @@ class LLMService:
 
     # --- providers -------------------------------------------------------------------------------
     def configured(self) -> list[ProviderName]:
+        if self.fake:
+            return [FAKE_AS]
         return [p for p in PROVIDERS if self.keys.secrets.get(LLM_SECRET[p])]
 
     def usable(self) -> list[ProviderName]:
         """Configured and not known to be broken (unchecked keys count as usable)."""
+        if self.fake:
+            return [FAKE_AS]
         return [p for p in self.configured() if self.keys.status(LLM_SECRET[p]).ok is not False]
 
     def provider(self, name: ProviderName) -> LLMProvider:
+        if self.fake:
+            return self._factory(name, "fake")
         key = self.keys.secrets.get(LLM_SECRET[name])
         if not key:
             raise LLMError(
@@ -102,6 +118,19 @@ class LLMService:
         return self._factory(name, key)
 
     async def statuses(self, validate: bool = True) -> list[ProviderStatus]:
+        if self.fake:
+            return [
+                ProviderStatus(
+                    provider=p,
+                    label=SECRET_DEFS[LLM_SECRET[p]].label,
+                    configured=p == FAKE_AS,
+                    ok=True if p == FAKE_AS else None,
+                    error=None,
+                    source="fake" if p == FAKE_AS else None,
+                    default_model=self.settings.default_llm_models.get(p, ""),
+                )
+                for p in PROVIDERS
+            ]
         if validate:
             await self.keys.ensure_checked([LLM_SECRET[p] for p in PROVIDERS])
         out = []

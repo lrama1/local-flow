@@ -14,6 +14,7 @@ import { AudioSection } from "./AudioSection";
 import { CAMERA_MOVES, MODES, SHOT_TYPES } from "./constants";
 import { KeyframeSection } from "./KeyframeSection";
 import type { KeyframeRun, KeyframeWhich } from "./references";
+import type { PromptField } from "./ReviewCheck";
 import { VideoSection } from "./VideoSection";
 
 type Draft = Pick<
@@ -92,6 +93,8 @@ export function ShotPanel({
     music_cue: draft.music_cue || null,
   });
   const save = () => m.updateShot.mutate({ id: shot.id, body: saveBody() });
+  // A vision-review fix lands in the draft like an AI rewrite: the user sees it, then saves or regenerates.
+  const applyFix = (field: PromptField, text: string) => set(field, text);
 
   const runRewrite = async () => {
     setRewriting(true);
@@ -320,6 +323,7 @@ export function ShotPanel({
             // One PATCH with the draft: the panel remounts when the shot changes, which would drop edits.
             m.updateShot.mutateAsync({ id: shot.id, body: { ...saveBody(), reference_asset_ids: ids } })
           }
+          onApplyFix={applyFix}
         />
 
         <VideoSection
@@ -328,6 +332,7 @@ export function ShotPanel({
           beforeGenerate={
             dirty ? () => m.updateShot.mutateAsync({ id: shot.id, body: saveBody() }) : undefined
           }
+          onApplyFix={applyFix}
         />
 
         <div className="space-y-1.5">

@@ -642,6 +642,91 @@ Verified on the RTX 5080 with Kokoro-82M, MMAudio large 44.1 kHz v2, MusicGen sm
     - Kokoro and MMAudio need `allow_pickle_weights = true`. Their weights are loaded with
       `torch.load(weights_only=True)`.
 
+## M7 — Polish
+
+Verified on the real data dir (RTX 5080): the library on "Audio check (M6)", vision review with
+gpt-5.4-mini on "Harbor Keeper (M3.5 check)" and "Harbor Lantern", Diagnostics, and the Playwright smoke
+test. Test data made along the way was removed.
+
+1. **Collections** (`collections`, `collection_assets`, migration 0007):
+   - Per project, with unique names (409 `collection_exists`). An asset can be in any number of them.
+     Deleting an asset or a collection cascades to the memberships (bulk SQL deletes, not ORM deletes of rows
+     the FK cascade already removed). Only assets of the same project can be added.
+   - The cover is the newest member with a thumbnail. Changes publish `collections.updated`.
+2. **Library queries** (`GET /projects/{id}/assets`):
+   - Type, source, favorite and collection are SQL filters. Tag, model, scene, ingredient and search read
+     `generation_json` in Python, which is portable and fine at a project's scale (hundreds to a few
+     thousand assets). `GET …/assets/facets` returns the counts the filter menus show.
+   - `model` matches the model entry id, or the model name for assets made before entries had ids.
+     `scene_id` matches assets made for any shot of the scene. `featuring` (an ingredient) matches its
+     candidates, prompts that @mention it, and assets made for shots it's in.
+   - Search covers the prompt, the raw prompt with @mentions, speech text, dialogue lines, the uploaded
+     file name, the model name and tags.
+   - `POST /projects/{id}/assets/bulk` tags, untags, favorites or deletes up to 500 assets in one call and
+     publishes one `assets.updated` (or the delete events).
+3. **Uploads are normalized** (Section 13): video that isn't H.264/yuv420p is re-encoded (libx264 CRF 18,
+   AAC audio), H.264 in another container (MOV, MKV) is remuxed without re-encoding, and MP3/FLAC/OGG become
+   16-bit WAV. WAV, M4A and AAC are kept. `generation.normalized` records what happened, e.g.
+   "webm/vp9 → mp4/h264". Re-encoding scales odd sizes down to even ones (yuv420p H.264 needs them). A
+   failed conversion is a 422 `convert_failed`, and the upload and any partial output are deleted.
+   Ingesting runs off the event loop (`asyncio.to_thread`).
+4. **Frame extraction** (`POST /assets/{id}/extract-frame`) snaps the time to the take's frame grid and
+   clamps it to the last frame. ffmpeg seeks half a frame early: with an accurate input seek it drops
+   frames before the (millisecond-rounded) time, so 1/24 s ("0.042") would have returned frame 2 for
+   frame 1, about half the frames at 24 and 30 fps. A test checks frame colors. The image is a normal
+   asset (`source: extracted`) with the video as its parent. In the drawer, "Use as keyframe/reference" on a
+   video extracts the frame under the playhead first. Saved frames show inline, because a toast's action
+   button can't be clicked behind a modal.
+5. **Reuse settings** maps an asset's `generation` back to the Playground form (`features/assets/reuse.ts`):
+   kind from the job type, the prompt, the seed the output actually used, the size preset with the nearest
+   aspect ratio, duration and fps, model, LoRAs, extra params and input assets. Playground outputs keep
+   their raw prompt with @mentions (Cast library keys, which the Playground resolves again). Project
+   assets (with a `target_ref`) use the prompt as sent: their mentions are project keys the Playground
+   would reject, and the sent prompt includes the camera move, style and cast details. It travels through
+   the UI store, and the Playground reads it once. Inputs from another project are shown (and allowed:
+   Playground requests resolve assets by id).
+6. **Vision review** (`POST /shots/{id}/review`, purpose `vision_review`, `vision_review.v1.j2`):
+   - Reviews the selected keyframe (default) or any image or take of the shot. A take is reviewed at 30%
+     and 70% of its length (early and late drift). Images are sent as JPEG data URLs of at most 1024 px.
+   - The references are exactly what keyframes use (`references_for(...).selected`: the shot-type-aware
+     views, or the user's override), with each ingredient's visual and outfit prompt as text.
+   - The answer is `{consistent, issues[], suggested_prompt_fix}`. A semantic check asks for a repair when
+     it says inconsistent without issues or a fix. The fix replaces the field it targets (keyframe, end
+     frame or video prompt) and keeps @mentions; the template forbids adding new ones (a real run had
+     turned "Mara" into "@Mara").
+   - `GET /llm/vision?purpose=` reports whether the purpose's model can read images; the button is
+     disabled with the reason otherwise. The check saves the panel's draft first, which remounts the panel
+     (it's keyed on the shot's `updated_at`), so the result, pending state and error live in the
+     TanStack Query caches, keyed by shot and asset, not in component state. Real runs: 3–4 s and $0.003–0.005 per check. It correctly passed
+     Old Tom's keyframe and take and flagged a product shot of a lantern as missing Mara, the pier and the
+     dusk light.
+7. **Diagnostics** (`GET /system/diagnostics`, `GET /system/logs/{name}`, `GET /system/diagnostics/bundle`):
+   - Checks: a write/read/delete test in the data dir, disk space (warns under 20 GB), ffmpeg/ffprobe,
+     nvidia-smi, PyTorch + CUDA as the worker sees it, worker state, the secret store's backend name (e.g.
+     "Windows WinVaultKeyring"), and LLM providers. Each failure says how to fix it.
+   - The worker reports torch, CUDA, cuDNN and the device in its `ready` event, only if torch is already
+     loaded, so the FakeEngine never imports it. `SystemStatus.cuda_version`/`cuda_available` come from there.
+   - Folder sizes walk the tree without following links (the HF cache links snapshots to blobs) and are
+     cached for a minute; `?refresh=true` recounts. About 80 ms for 60 GB of models.
+   - Log tails only serve files listed in `logs/`, formatted from the JSON records and redacted again. The
+     bundle (checks, status, `config.toml`, the last 5000 lines of each current log) is redacted and has no
+     media, database or key files. A scan of a real bundle found none of this machine's 12 secret values.
+     The UI downloads it with `fetch` and a blob URL, so no new `?token=` route was needed.
+8. **`fake_llm` mode** (config, `LOCALFLOW_FAKE_LLM`): `FakeLLMProvider` with canned responses for every
+   purpose (`services/llm/demo.py`, also the tests' fixtures) answers as OpenAI. No key is read, statuses
+   show it as configured with source `fake`, and Diagnostics warns that it's on. It's for offline demos and
+   the smoke test.
+9. **Playwright smoke test** (`frontend/e2e/`, `npm run test:e2e`):
+   - `e2e/serve.mjs` starts the real server on port 8799 with a fresh temp data dir, the FakeEngine,
+     `fake_llm`, and no env keys or keyring, serving the built `dist/`.
+   - The test creates a project, then runs refine, bible and breakdown (5 shots), Generate all with
+     auto-approved keyframes, waits until every shot has a take, then auto-assembles, exports and checks the
+     export in the library. About 15 s.
+   - It's separate from `npm test`, which stays fast and needs no browser.
+10. **Limits:** search is a substring match (no ranking or full-text index). Vision review looks at stills,
+    so it can't judge motion. The bundle includes `config.toml` as written (redacted), which may include
+    local paths.
+
 ## In-app tutorials
 
 1. **Static files, no API:** videos, captions, posters and `index.json` live in

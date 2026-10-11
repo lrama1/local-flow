@@ -4,6 +4,7 @@ import { useUi } from "@/stores/ui";
 import { JOB_TYPE_LABELS } from "@/lib/utils";
 import { ck } from "./characters";
 import { getToken, type Asset, type Job, type Schemas, type SystemStatus, type WorkerInfo } from "./client";
+import { lk } from "./library";
 import { mk, type ModelEntry } from "./models";
 import { JOBS_PAGE_SIZE, qk } from "./queries";
 import { sk } from "./story";
@@ -26,6 +27,7 @@ export type ServerEvent =
   | { type: "ingredients.updated"; project_id: string }
   | { type: "library.updated"; library_character_id: string }
   | { type: "voices.updated" }
+  | { type: "collections.updated" | "assets.updated"; project_id: string }
   | { type: "model.status"; model: ModelEntry }
   | { type: "model.status"; model_entry_id: string; deleted: true }
   | {
@@ -121,6 +123,13 @@ export function handleServerEvent(qc: QueryClient, ev: ServerEvent): void {
       // Library edits change the "update available" badge on linked characters in every project.
       void qc.invalidateQueries({ queryKey: ck.libraryRoot });
       void qc.invalidateQueries({ queryKey: ["ingredients"] });
+      break;
+    case "assets.updated":
+    case "collections.updated":
+      if (ev.type === "assets.updated") void qc.invalidateQueries({ queryKey: ["asset"] }); // tags, favorite
+      void qc.invalidateQueries({ queryKey: qk.assetsRoot(ev.project_id) });
+      void qc.invalidateQueries({ queryKey: lk.collections(ev.project_id) });
+      void qc.invalidateQueries({ queryKey: ["asset-collections"] });
       break;
     case "voices.updated":
       void qc.invalidateQueries({ queryKey: vok.voices }); // also refreshes voice suggestions

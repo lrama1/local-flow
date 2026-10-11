@@ -12,6 +12,10 @@ const PURPOSE_LABELS: Record<string, string> = {
   bible: "Story bible",
   breakdown: "Shot breakdown",
   prompt_rewrite: "Prompt rewrite",
+  character_expand: "Character from text",
+  character_describe: "Describe a photo",
+  voice_design: "Voice design",
+  vision_review: "Consistency check",
 };
 
 function DefaultRow({

@@ -178,6 +178,9 @@ class WorkerInfo(BaseModel):
     engine_note: str | None = None  # e.g. why `auto` fell back to the FakeEngine
     vram: dict[str, Any] | None = None  # worker's last VRAM snapshot (MB): device_used, allocated, baseline
     error: str | None = None
+    # torch / CUDA as the worker sees them: {torch, cuda, cuda_available, device, cudnn}; None until it
+    # reports (and for the FakeEngine, which never imports torch).
+    runtime: dict[str, Any] | None = None
 
 
 class SystemStatus(BaseModel):
@@ -194,6 +197,7 @@ class SystemStatus(BaseModel):
     python_version: str
     torch_version: str | None
     cuda_version: str | None
+    cuda_available: bool | None = Field(default=None, description="From the worker; None = not reported")
     diffusers_version: str | None
     vram_profile: str
     dev_mode: bool

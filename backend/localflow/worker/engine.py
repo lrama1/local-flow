@@ -39,6 +39,24 @@ def gpu_unavailable_reason() -> str | None:
     return None
 
 
+def torch_runtime() -> dict[str, Any] | None:
+    """torch/CUDA versions for diagnostics, if torch is already loaded (the FakeEngine never imports it)."""
+    torch = sys.modules.get("torch")
+    if torch is None:
+        return None
+    try:
+        available = bool(torch.cuda.is_available())
+        return {
+            "torch": str(torch.__version__),
+            "cuda": torch.version.cuda,
+            "cuda_available": available,
+            "device": torch.cuda.get_device_name(0) if available else None,
+            "cudnn": torch.backends.cudnn.version() if available else None,
+        }
+    except Exception as e:  # diagnostics must never break the worker
+        return {"torch": str(getattr(torch, "__version__", "?")), "error": f"{type(e).__name__}: {e}"}
+
+
 def resolve_engine(requested: str) -> tuple[str, str | None]:
     """`auto` → real when an NVIDIA GPU and the GPU stack are present, else fake. Returns (engine, reason)."""
     if requested == "fake":

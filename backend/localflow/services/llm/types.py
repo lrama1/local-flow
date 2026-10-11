@@ -25,6 +25,7 @@ PURPOSES: tuple[Purpose, ...] = (
     "character_expand",
     "character_describe",
     "voice_design",
+    "vision_review",
 )
 
 

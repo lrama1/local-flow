@@ -1,7 +1,8 @@
-import { BoxesIcon, CheckIcon, FlaskConicalIcon, Loader2Icon, SparklesIcon } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { BoxesIcon, CheckIcon, FlaskConicalIcon, Loader2Icon, SparklesIcon, XIcon } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router";
 import { withToken, type Asset, type Job } from "@/api/client";
+import { useAsset } from "@/api/imagegen";
 import { useModels } from "@/api/models";
 import { useAdapters, useAssets, useGenerate, useJob, usePlayground, type GenerateKind } from "@/api/queries";
 import { AssetGrid } from "@/components/AssetGrid";
@@ -54,17 +55,28 @@ function AssetPicker({
   onChange: (ids: string[]) => void;
 }) {
   const options = assets.filter((a) => a.type === input.type);
+  // Inputs reused from another project's asset ("Reuse settings") aren't in the Playground's list.
+  const foreign = selected.filter((id) => !options.some((a) => a.id === id));
   return (
     <div className="space-y-1.5">
       <Label>
         {input.label}
         {input.multiple && " (pick up to 8)"}
       </Label>
+      {foreign.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" data-testid={`foreign-${input.field}`}>
+          {foreign.map((id) => (
+            <ForeignPick key={id} id={id} onRemove={() => onChange(selected.filter((x) => x !== id))} />
+          ))}
+        </div>
+      )}
       {options.length === 0 ? (
-        <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
-          No {input.type}s yet. Generate one first with{" "}
-          {input.type === "image" ? "Text → image" : "Text → video"}.
-        </p>
+        !foreign.length && (
+          <p className="text-muted-foreground rounded-md border border-dashed p-3 text-xs">
+            No {input.type}s yet. Generate one first with{" "}
+            {input.type === "image" ? "Text → image" : "Text → video"}.
+          </p>
+        )
       ) : (
         <div className="grid grid-cols-5 gap-1.5">
           {options.slice(0, 20).map((a) => {
@@ -99,6 +111,24 @@ function AssetPicker({
         </div>
       )}
     </div>
+  );
+}
+
+function ForeignPick({ id, onRemove }: { id: string; onRemove: () => void }) {
+  const { data: asset } = useAsset(id);
+  return (
+    <span className="bg-muted border-primary relative inline-flex size-16 overflow-hidden rounded-md border-2">
+      {asset && <AssetThumb asset={asset} />}
+      <button
+        type="button"
+        aria-label="Remove input"
+        title="From another project"
+        onClick={onRemove}
+        className="bg-background/80 absolute top-0.5 right-0.5 rounded-full p-0.5"
+      >
+        <XIcon className="size-3" />
+      </button>
+    </span>
   );
 }
 
@@ -156,8 +186,15 @@ function CurrentJob({ job, assets }: { job: Job; assets: Asset[] }) {
 }
 
 export function PlaygroundPage() {
-  const [kind, setKind] = useState<GenerateKind>("t2v");
-  const [form, setForm] = useState<PlaygroundForm>(DEFAULT_FORM);
+  // "Reuse settings" from the asset library opens the Playground prefilled (read once, then cleared).
+  const [kind, setKind] = useState<GenerateKind>(
+    () => (useUi.getState().playgroundPrefill?.kind as GenerateKind | undefined) ?? "t2v",
+  );
+  const [form, setForm] = useState<PlaygroundForm>(() => ({
+    ...DEFAULT_FORM,
+    ...(useUi.getState().playgroundPrefill?.form as Partial<PlaygroundForm> | undefined),
+  }));
+  useEffect(() => useUi.getState().setPlaygroundPrefill(null), []);
   const [jobId, setJobId] = useState<string>();
   const [formError, setFormError] = useState<string>();
   const cfg = KINDS[kind];

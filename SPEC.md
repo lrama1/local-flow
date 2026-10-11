@@ -264,7 +264,7 @@ All IDs are ULIDs (strings). All tables have `created_at` and `updated_at`. JSON
 `id, project_id, type ("image"|"video"|"audio"), path (relative to project dir), thumb_path, width, height, duration_s, fps, has_audio (bool), source ("generated"|"uploaded"|"extracted"|"export"|"imported"), parent_asset_ids_json, generation_json (full params incl. model id, seed, prompts, adapter version), tags_json, favorite (bool)`
 
 **collections**, **collection_assets**
-User-defined groupings of assets.
+User-defined groupings of assets: `collections (id, project_id, name (unique per project), description)` and `collection_assets (collection_id, asset_id)`, a unique pair. An asset can be in several collections; deleting either side removes the membership.
 
 **timelines** (one per project in v1)
 `id, project_id, tracks_json (Timeline, Section 15.1)`
@@ -297,6 +297,7 @@ User-defined groupings of assets.
 - `hf_home` (defaults to `<data_dir>/models/hf`)
 - `allow_nsfw_models` (default `false`; hides NSFW Civitai results)
 - `allow_pickle_weights` (default `false`; see Section 18)
+- `fake_llm` (default `false`; canned LLM responses for demos and the E2E test, Section 19)
 
 ### 7.2 Secrets
 Secrets: `openai_api_key`, `anthropic_api_key`, `openrouter_api_key`, `hf_token`, `civitai_api_key`.
@@ -431,8 +432,8 @@ Rules embedded in the system prompt:
 **Step 4 — Shot prompt rewrite (on demand)** (`purpose=prompt_rewrite`)
 Rewrites one shot's prompts based on a user instruction ("make it night", "more dramatic"), keeping ingredient consistency.
 
-**Step 5 — Vision review (optional, later milestone)** (`purpose=vision_review`)
-Sends a keyframe and its ingredient reference images to a vision-capable model. Returns `{consistent: bool, issues: [str], suggested_prompt_fix: str}`.
+**Step 5 — Vision review (optional; needs a vision-capable model)** (`purpose=vision_review`)
+Sends a keyframe (or two frames of a take, at 30% and 70%) and the shot's reference images (the ones keyframe composition uses, Section 11.7) to a vision-capable model. Returns `{consistent: bool, issues: [str], suggested_prompt_fix: str}`. The fix is the complete revised keyframe, end-frame or video prompt (whichever the image came from), keeping its @mentions. The UI applies it to the shot panel's draft.
 
 ### 8.4 Prompt templates
 - Stored as versioned Jinja2 templates in `services/llm/prompts/` (`refine.v1.j2`, etc.). The template version is recorded with each story revision.
@@ -663,9 +664,10 @@ The total respects the edit model's maximum reference count, falling back to the
 ---
 
 ## 13. Asset library
-- Grid view with filters: type, source, ingredient, scene/shot, favorite, tags, collection, and model used.
-- Asset detail drawer: preview, full `generation_json`, "reuse settings", "use as keyframe", "use as ingredient reference", "extend" (video), "extract frame at time" (video → image asset), download.
-- Upload: images (png/jpg/webp), videos (mp4/mov/webm → transcoded to H.264 MP4), audio (wav/mp3/flac → stored as WAV or AAC).
+- Grid view with filters: type, source, ingredient, scene/shot, favorite, tags, collection, and model used. Search covers prompts (raw and resolved), dialogue, file names, model names, and tags. Newest or oldest first, paginated.
+- Collections sidebar (all, favorites, each collection with its count; create, rename, delete). Multi-select for bulk tag, favorite, add to / remove from a collection, and delete.
+- Asset detail drawer: preview, full `generation_json`, "reuse settings" (opens the Playground with the same kind, prompt, seed, size, model, LoRAs and inputs), "use as keyframe" (shot + first/last frame), "use as ingredient reference" (primary or a character view), "extend" (video: on its shot if it's a take, else in the Playground), "extract frame at time" (video → image asset at the playhead, on the frame grid), tags, collections, source assets ("made from"), download. For a video, "use as keyframe/reference" uses the frame under the playhead.
+- Upload (button or drag-and-drop): images (png/jpg/webp), videos (non-H.264 → transcoded to H.264 MP4; H.264 in MOV/MKV → remuxed), audio (mp3/flac/ogg → WAV; wav/m4a/aac kept). `generation_json.normalized` records the conversion.
 
 ---
 
@@ -681,7 +683,7 @@ The total respects the edit model's maximum reference count, falling back to the
 - On completion, the worker writes files. The API creates the `assets` row(s) and links them to `target_ref` (e.g., adds them to a shot's candidate list).
 
 ### 14.3 Events (WebSocket `/ws/events`)
-JSON messages: `{type, ...}` where `type ∈ job.created | job.updated | job.progress | job.preview | job.completed | job.failed | download.progress | model.status | worker.status | story.updated | board.updated | ingredients.updated | timeline.updated | asset.created | asset.deleted | project.deleted`.
+JSON messages: `{type, ...}` where `type ∈ job.created | job.updated | job.progress | job.preview | job.completed | job.failed | download.progress | model.status | worker.status | story.updated | board.updated | ingredients.updated | timeline.updated | asset.created | asset.deleted | assets.updated | collections.updated | project.deleted` (plus `library.updated` and `voices.updated`, Sections 11.7 and 12.2).
 - The frontend invalidates the relevant TanStack Query caches on events.
 - Heartbeat every 15 s. The client reconnects automatically with backoff.
 
@@ -742,7 +744,8 @@ All request and response bodies are Pydantic models. Errors use `{error: {code, 
 - `POST /projects/{id}/story/breakdown` `{target_length_seconds, replace_existing: bool}`
 - `PATCH /projects/{id}/story` (manual edits)
 - `POST /shots/{id}/rewrite-prompt` `{instruction}`
-- `POST /shots/{id}/review` (vision review; later milestone)
+- `POST /shots/{id}/review` `{asset_id? (default: the selected keyframe, else the take), llm?}` → `{asset_id, target: "keyframe"|"end_keyframe"|"video", prompt_field, current_prompt, consistent, issues, suggested_prompt_fix, references, frames_s, usage}` (vision review, Section 8.3; 400 `nothing_to_review` / `no_references`, 409 `llm_no_vision`)
+- `GET /llm/vision?purpose=` → `{available, model, reason}` (whether the purpose's model can read images)
 
 LLM endpoints are synchronous request/response with a 120 s timeout. The UI shows a spinner and allows cancel (AbortController).
 
@@ -794,10 +797,14 @@ LLM endpoints are synchronous request/response with a 120 s timeout. The UI show
 - `POST /generate/{t2i|image_edit|t2v|i2v|flf2v|extend|tts|v2a|music}` → job
 
 **Assets & collections**
-- `GET /projects/{id}/assets?type=&source=&tag=&favorite=&collection=&q=` (paginated); `ingredient_id=` or `shot_id=&slot=` lists the candidates generated for that target
-- `POST /projects/{id}/assets/upload` (multipart) · `PATCH/DELETE /assets/{id}`
-- `POST /assets/{id}/extract-frame` `{time_s}`
-- `GET/POST /projects/{id}/collections`, `POST/DELETE /collections/{id}/assets`
+- `GET /projects/{id}/assets?type=&source=&tag=&favorite=&collection=&model=&scene_id=&featuring=&q=&sort=newest|oldest` (paginated); `ingredient_id=` or `shot_id=&slot=` lists the candidates generated for that target. `model` is a model entry id (or name); `featuring` is an ingredient id (its candidates, prompts that @mention it, assets made for shots it's in)
+- `GET /projects/{id}/assets/facets` → `{total, favorites, types, sources, tags: [{tag, count}], models: [{model, name, count}]}`
+- `POST /projects/{id}/assets/upload` (multipart; 415 `unsupported_media`, 422 `convert_failed`) · `PATCH/DELETE /assets/{id}`
+- `POST /projects/{id}/assets/bulk` `{asset_ids, add_tags?, remove_tags?, favorite?, delete?}` → `{updated, deleted}`
+- `POST /assets/{id}/extract-frame` `{time_s}` → the new image asset
+- `GET /assets/{id}/collections` → collection ids
+- `GET/POST /projects/{id}/collections` (`{name, description?, asset_ids?}`; 409 `collection_exists`) · `PATCH/DELETE /collections/{id}` · `POST/DELETE /collections/{id}/assets` `{asset_ids}`
+- Events `collections.updated`, `assets.updated` `{project_id}`
 
 **Files**
 - `GET /files/{project_id}/{asset_id}` with Range support (video seeking). `GET /thumbs/{project_id}/{asset_id}`. Paths are resolved only via DB lookup (Section 18).
@@ -822,7 +829,9 @@ LLM endpoints are synchronous request/response with a 120 s timeout. The UI show
 **Settings & system**
 - `GET/PATCH /settings` (non-secret) · `GET /settings/secrets` (status only) · `PUT /settings/secrets/{name}` `{value}` · `DELETE /settings/secrets/{name}` · `POST /settings/secrets/{name}/test` (returns account status for hub tokens, Section 7.3) · `POST /settings/secrets/hf_token/import-cli`
 - `GET /llm/models?provider=`
-- `GET /system/status` → GPU name, VRAM used/total, RAM, disk free, worker state, loaded model, ffmpeg found, torch/CUDA versions, diffusers version
+- `GET /system/status` → GPU name, VRAM used/total, RAM, disk free, worker state, loaded model, ffmpeg found, torch/CUDA versions (as the worker sees them), CUDA availability, diffusers version
+- `GET /system/diagnostics?refresh=` → `{checks: [{key, label, status: "ok"|"warn"|"error"|"skip", detail}], versions, storage: [{key, path, size_mb, files}], disk_free_mb, disk_total_mb, logs}` (Section 19)
+- `GET /system/logs/{name}?lines=` → the last lines of a listed log file · `GET /system/diagnostics/bundle` → a redacted zip
 - `GET /llm/usage?since=`
 
 ---
@@ -869,7 +878,8 @@ Left sidebar: Projects, Cast library, Playground, Models, Settings. Top bar: cur
 - Structured logs to `logs/localflow.log` (rotating) and the console. Include `job_id` and `project_id` context.
 - The worker logs VRAM / RAM usage at model load, job start, and job end.
 - User-facing errors are actionable, e.g.: "Out of GPU memory generating 81 frames at 1280×720 with Wan 2.2 A14B. Try the 'low' VRAM profile, fewer frames, or the 5B model." / "black-forest-labs/FLUX.1-dev is gated. You're signed in as <user>, but haven't accepted its license. Open the model page, accept, then click Check again."
-- `GET /system/status` and a **Diagnostics** panel in Settings: versions, CUDA availability, ffmpeg check, write test for data dir, keyring backend name.
+- `GET /system/status` and a **Diagnostics** panel in Settings: versions, CUDA availability, ffmpeg check, write test for data dir, keyring backend name. Also: disk space, GPU (nvidia-smi), worker state, LLM providers, disk use per data folder, a log viewer, and a **support bundle** (checks, versions, `config.toml`, recent logs; secrets redacted, no media or database) for bug reports.
+- `fake_llm = true` (config) answers every LLM purpose with canned demo responses and needs no key: for offline demos and the E2E smoke test.
 
 ---
 

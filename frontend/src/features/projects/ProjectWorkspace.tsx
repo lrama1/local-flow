@@ -8,9 +8,9 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
-import { useAssets, useDeleteProject, useProject } from "@/api/queries";
-import { AssetGrid } from "@/components/AssetGrid";
+import { useDeleteProject, useProject } from "@/api/queries";
 import { EmptyState } from "@/components/EmptyState";
+import { AssetLibrary } from "@/features/assets/AssetLibrary";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/primitives";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,19 +26,6 @@ const TABS: { value: string; label: string; icon: LucideIcon }[] = [
   { value: "timeline", label: "Timeline", icon: FilmIcon },
   { value: "assets", label: "Assets", icon: ImagesIcon },
 ];
-
-function ProjectAssets({ projectId }: { projectId: string }) {
-  const { data, isLoading } = useAssets(projectId);
-  if (isLoading) return <Skeleton className="h-40" />;
-  if (!data?.items.length) {
-    return (
-      <EmptyState icon={ImagesIcon} title="No assets yet">
-        Generated and uploaded images, videos, and audio for this project appear here.
-      </EmptyState>
-    );
-  }
-  return <AssetGrid assets={data.items} />;
-}
 
 export function ProjectWorkspace() {
   const { projectId, tab = "story" } = useParams();
@@ -91,7 +78,7 @@ export function ProjectWorkspace() {
         {TABS.map(({ value }) => (
           <TabsContent key={value} value={value} className="pt-5">
             {value === "assets" ? (
-              <ProjectAssets projectId={project.id} />
+              <AssetLibrary projectId={project.id} />
             ) : value === "story" ? (
               <StoryTab
                 projectId={project.id}

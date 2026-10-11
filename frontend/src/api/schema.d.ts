@@ -4,6 +4,64 @@
  */
 
 export interface paths {
+    "/api/system/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Diagnostics
+         * @description Checks (data-dir write test, ffmpeg, GPU, CUDA, worker, secret storage), versions, storage, logs.
+         *     Folder sizes are cached for a minute; `refresh` recounts.
+         */
+        get: operations["get_diagnostics_api_system_diagnostics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/logs/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Log */
+        get: operations["get_log_api_system_logs__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/system/diagnostics/bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diagnostics Bundle
+         * @description A redacted zip (diagnostics, status, config.toml, recent logs) to attach to a bug report.
+         */
+        get: operations["diagnostics_bundle_api_system_diagnostics_bundle_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -121,6 +179,143 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/assets/facets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Asset Facets
+         * @description Filter values for the asset library, with counts.
+         */
+        get: operations["asset_facets_api_projects__project_id__assets_facets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/assets/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Assets
+         * @description Tag, untag, (un)favorite or delete several of the project's assets.
+         */
+        post: operations["bulk_assets_api_projects__project_id__assets_bulk_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/{asset_id}/extract-frame": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extract Frame
+         * @description A still of a video at `time_s` (snapped to its frame grid), as a new "extracted" image asset.
+         */
+        post: operations["extract_frame_api_assets__asset_id__extract_frame_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/{asset_id}/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Asset Collections
+         * @description Ids of the collections this asset is in.
+         */
+        get: operations["asset_collections_api_assets__asset_id__collections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Collections */
+        get: operations["list_collections_api_projects__project_id__collections_get"];
+        put?: never;
+        /** Create Collection */
+        post: operations["create_collection_api_projects__project_id__collections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/collections/{collection_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Collection
+         * @description Deletes the collection; its assets stay.
+         */
+        delete: operations["delete_collection_api_collections__collection_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Collection */
+        patch: operations["update_collection_api_collections__collection_id__patch"];
+        trace?: never;
+    };
+    "/api/collections/{collection_id}/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add To Collection */
+        post: operations["add_to_collection_api_collections__collection_id__assets_post"];
+        /** Remove From Collection */
+        delete: operations["remove_from_collection_api_collections__collection_id__assets_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -578,6 +773,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/llm/vision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Llm Vision
+         * @description Whether the model a purpose resolves to can read images (features that need it hide otherwise).
+         */
+        get: operations["llm_vision_api_llm_vision_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/llm/usage": {
         parameters: {
             query?: never;
@@ -726,6 +941,26 @@ export interface paths {
         put?: never;
         /** Rewrite Prompt */
         post: operations["rewrite_prompt_api_shots__shot_id__rewrite_prompt_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shots/{shot_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Shot
+         * @description Vision review: does the keyframe (default) or `asset_id` match the shot's reference images?
+         */
+        post: operations["review_shot_api_shots__shot_id__review_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1963,6 +2198,25 @@ export interface components {
                 [key: string]: components["schemas"]["LlmChoice"] | null;
             };
         };
+        /** AssetFacets */
+        AssetFacets: {
+            /** Total */
+            total: number;
+            /** Favorites */
+            favorites: number;
+            /** Types */
+            types: {
+                [key: string]: number;
+            };
+            /** Sources */
+            sources: {
+                [key: string]: number;
+            };
+            /** Tags */
+            tags: components["schemas"]["TagCount"][];
+            /** Models */
+            models: components["schemas"]["ModelCount"][];
+        };
         /** AssetOut */
         AssetOut: {
             /** Id */
@@ -2171,6 +2425,32 @@ export interface components {
              */
             replace_existing?: boolean;
             llm?: components["schemas"]["LlmChoice"] | null;
+        };
+        /**
+         * BulkAssetsBody
+         * @description Tag, favorite or delete several assets at once.
+         */
+        BulkAssetsBody: {
+            /** Asset Ids */
+            asset_ids: string[];
+            /** Add Tags */
+            add_tags?: string[];
+            /** Remove Tags */
+            remove_tags?: string[];
+            /** Favorite */
+            favorite?: boolean | null;
+            /**
+             * Delete
+             * @default false
+             */
+            delete?: boolean;
+        };
+        /** BulkAssetsOut */
+        BulkAssetsOut: {
+            /** Updated */
+            updated: number;
+            /** Deleted */
+            deleted: number;
         };
         /** CharacterCapabilities */
         CharacterCapabilities: {
@@ -2413,6 +2693,58 @@ export interface components {
             /** Shot Id */
             shot_id?: string | null;
         };
+        /** CollectionAssetsBody */
+        CollectionAssetsBody: {
+            /** Asset Ids */
+            asset_ids: string[];
+        };
+        /** CollectionCreate */
+        CollectionCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description?: string;
+            /**
+             * Asset Ids
+             * @description Assets to start with
+             */
+            asset_ids?: string[];
+        };
+        /** CollectionOut */
+        CollectionOut: {
+            /** Id */
+            id: string;
+            /** Project Id */
+            project_id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /** Asset Count */
+            asset_count: number;
+            /** Cover Thumb Url */
+            cover_thumb_url: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CollectionUpdate */
+        CollectionUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+        };
         /** DeleteModelOut */
         DeleteModelOut: {
             /** Id */
@@ -2438,6 +2770,42 @@ export interface components {
             /** Body Outfit Prompt */
             body_outfit_prompt: string;
             usage: components["schemas"]["UsageOut"];
+        };
+        /** DiagCheck */
+        DiagCheck: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "warn" | "error" | "skip";
+            /** Detail */
+            detail: string;
+        };
+        /** DiagnosticsOut */
+        DiagnosticsOut: {
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /** Checks */
+            checks: components["schemas"]["DiagCheck"][];
+            /** Versions */
+            versions: {
+                [key: string]: string | null;
+            };
+            /** Storage */
+            storage: components["schemas"]["FolderUsage"][];
+            /** Disk Free Mb */
+            disk_free_mb: number | null;
+            /** Disk Total Mb */
+            disk_total_mb: number | null;
+            /** Logs */
+            logs: components["schemas"]["LogFile"][];
         };
         /** DialogueLine */
         DialogueLine: {
@@ -2661,6 +3029,11 @@ export interface components {
             crossfade_frames?: number;
             params?: components["schemas"]["VideoGenParams"];
         };
+        /** ExtractFrameBody */
+        ExtractFrameBody: {
+            /** Time S */
+            time_s: number;
+        };
         /** FLF2VBody */
         FLF2VBody: {
             /**
@@ -2746,6 +3119,20 @@ export interface components {
             first_asset_id: string;
             /** Last Asset Id */
             last_asset_id: string;
+        };
+        /** FolderUsage */
+        FolderUsage: {
+            /**
+             * Key
+             * @description models | projects | library | tmp | logs | database
+             */
+            key: string;
+            /** Path */
+            path: string;
+            /** Size Mb */
+            size_mb: number;
+            /** Files */
+            files: number;
         };
         /** GenerateAllBody */
         GenerateAllBody: {
@@ -3469,6 +3856,30 @@ export interface components {
             /** Visual Prompt */
             visual_prompt: string;
         };
+        /** LogFile */
+        LogFile: {
+            /** Name */
+            name: string;
+            /** Size Kb */
+            size_kb: number;
+            /**
+             * Modified
+             * Format: date-time
+             */
+            modified: string;
+        };
+        /** LogTail */
+        LogTail: {
+            /** Name */
+            name: string;
+            /**
+             * Lines
+             * @description Oldest first, formatted as `time level logger: message`
+             */
+            lines: string[];
+            /** Total Lines */
+            total_lines: number;
+        };
         /** LoraRef */
         LoraRef: {
             /** Model Entry Id */
@@ -3495,6 +3906,18 @@ export interface components {
             name?: string | null;
             /** Kind */
             kind?: string | null;
+        };
+        /** ModelCount */
+        ModelCount: {
+            /**
+             * Model
+             * @description Model entry id (or name for older assets): the `model` filter value
+             */
+            model: string;
+            /** Name */
+            name: string;
+            /** Count */
+            count: number;
         };
         /** ModelEntryOut */
         ModelEntryOut: {
@@ -4144,6 +4567,15 @@ export interface components {
             /** Revision */
             revision: number;
         };
+        /** ReviewBody */
+        ReviewBody: {
+            /**
+             * Asset Id
+             * @description Image or video to review; defaults to the selected keyframe, else the take
+             */
+            asset_id?: string | null;
+            llm?: components["schemas"]["LlmChoice"] | null;
+        };
         /** RevisionSummary */
         RevisionSummary: {
             /** Revision */
@@ -4531,6 +4963,43 @@ export interface components {
              */
             negative_prompt?: string;
         };
+        /** ShotReviewOut */
+        ShotReviewOut: {
+            /** Shot Id */
+            shot_id: string;
+            /** Asset Id */
+            asset_id: string;
+            /**
+             * Target
+             * @enum {string}
+             */
+            target: "keyframe" | "end_keyframe" | "video";
+            /**
+             * Prompt Field
+             * @description The shot field `suggested_prompt_fix` replaces
+             * @enum {string}
+             */
+            prompt_field: "keyframe_prompt" | "end_keyframe_prompt" | "video_prompt";
+            /** Current Prompt */
+            current_prompt: string;
+            /** Consistent */
+            consistent: boolean;
+            /** Issues */
+            issues: string[];
+            /** Suggested Prompt Fix */
+            suggested_prompt_fix: string;
+            /**
+             * References
+             * @description The reference images it was compared against
+             */
+            references: components["schemas"]["RefOut"][];
+            /**
+             * Frames S
+             * @description For takes: the reviewed frame times (empty for images)
+             */
+            frames_s: number[];
+            usage: components["schemas"]["UsageOut"];
+        };
         /** ShotRewriteResult */
         ShotRewriteResult: {
             /** Shot Id */
@@ -4801,6 +5270,11 @@ export interface components {
             torch_version: string | null;
             /** Cuda Version */
             cuda_version: string | null;
+            /**
+             * Cuda Available
+             * @description From the worker; None = not reported
+             */
+            cuda_available?: boolean | null;
             /** Diffusers Version */
             diffusers_version: string | null;
             /** Vram Profile */
@@ -5043,6 +5517,13 @@ export interface components {
             extra?: {
                 [key: string]: unknown;
             };
+        };
+        /** TagCount */
+        TagCount: {
+            /** Tag */
+            tag: string;
+            /** Count */
+            count: number;
         };
         /**
          * TemplateCreate
@@ -5480,6 +5961,20 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** VisionCapability */
+        VisionCapability: {
+            /** Purpose */
+            purpose: string;
+            /** Available */
+            available: boolean;
+            /**
+             * Model
+             * @description provider/model the purpose resolves to
+             */
+            model: string | null;
+            /** Reason */
+            reason: string | null;
+        };
         /** VoiceCreate */
         VoiceCreate: {
             /** Name */
@@ -5668,6 +6163,10 @@ export interface components {
             } | null;
             /** Error */
             error?: string | null;
+            /** Runtime */
+            runtime?: {
+                [key: string]: unknown;
+            } | null;
         };
     };
     responses: never;
@@ -5678,6 +6177,88 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get_diagnostics_api_system_diagnostics_get: {
+        parameters: {
+            query?: {
+                refresh?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiagnosticsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_log_api_system_logs__name__get: {
+        parameters: {
+            query?: {
+                lines?: number;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogTail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diagnostics_bundle_api_system_diagnostics_bundle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     health_api_health_get: {
         parameters: {
             query?: never;
@@ -5936,6 +6517,15 @@ export interface operations {
                 slot?: string | null;
                 /** @description generated | uploaded | extracted | export | imported */
                 source?: string | null;
+                /** @description Assets in this collection */
+                collection?: string | null;
+                /** @description Made with this model (entry id or name) */
+                model?: string | null;
+                /** @description Made for a shot of this scene */
+                scene_id?: string | null;
+                /** @description Ingredient id: its candidates, prompts mentioning it, shots it's in */
+                featuring?: string | null;
+                sort?: "newest" | "oldest";
                 offset?: number;
                 limit?: number;
             };
@@ -5954,6 +6544,338 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Page_AssetOut_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    asset_facets_api_projects__project_id__assets_facets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetFacets"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_assets_api_projects__project_id__assets_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkAssetsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkAssetsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    extract_frame_api_assets__asset_id__extract_frame_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtractFrameBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    asset_collections_api_assets__asset_id__collections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                asset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_collections_api_projects__project_id__collections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_collection_api_projects__project_id__collections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_collection_api_collections__collection_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_collection_api_collections__collection_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_to_collection_api_collections__collection_id__assets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionAssetsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_from_collection_api_collections__collection_id__assets_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                collection_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionAssetsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionOut"];
                 };
             };
             /** @description Validation Error */
@@ -6889,6 +7811,37 @@ export interface operations {
             };
         };
     };
+    llm_vision_api_llm_vision_get: {
+        parameters: {
+            query?: {
+                purpose?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisionCapability"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     llm_usage_api_llm_usage_get: {
         parameters: {
             query?: {
@@ -7212,6 +8165,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShotRewriteResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_shot_api_shots__shot_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ReviewBody"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShotReviewOut"];
                 };
             };
             /** @description Validation Error */

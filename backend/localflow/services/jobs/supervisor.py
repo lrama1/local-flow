@@ -77,6 +77,7 @@ class WorkerSupervisor:
         self.engine: str = settings.engine
         self.engine_note: str | None = None
         self.vram: dict[str, Any] | None = None
+        self.runtime: dict[str, Any] | None = None  # the worker's torch/CUDA versions (diagnostics)
         # Called after a job's outputs are ingested (links candidates to ingredients/shots).
         self.on_assets: Callable[[Job, list[Asset]], None] | None = None
 
@@ -213,6 +214,7 @@ class WorkerSupervisor:
             engine_note=self.engine_note,
             vram=self.vram,
             error=self.error,
+            runtime=self.runtime,
         )
 
     def preview_path(self, job_id: str) -> Path | None:
@@ -330,6 +332,7 @@ class WorkerSupervisor:
             self.error = ev.data.get("error")
             self.engine = ev.data.get("engine") or self.settings.engine
             self.engine_note = ev.data.get("engine_note")
+            self.runtime = ev.data.get("runtime")
             baseline = ev.data.get("vram_baseline")
             self.vram = {"baseline": baseline, **(baseline or {})} if baseline else None
             self._set_state("idle")

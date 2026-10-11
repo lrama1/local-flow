@@ -49,7 +49,7 @@ DEFAULT_CONFIG_TOML = """\
 # anthropic = "claude-sonnet-5"
 # openrouter = "anthropic/claude-sonnet-5"
 #
-# [llm_purpose_models]             # purpose = refine | bible | breakdown | prompt_rewrite
+# [llm_purpose_models]             # refine | bible | breakdown | prompt_rewrite | vision_review | ...
 # breakdown = "openai/gpt-5.5"
 """
 
@@ -106,6 +106,8 @@ class Settings(BaseSettings):
     llm_purpose_models: dict[str, str] = Field(default_factory=dict)  # e.g. {"breakdown": "openai/gpt-5.5"}
     llm_timeout_s: float = 120.0
     llm_max_repairs: int = 2
+    # Offline demo / smoke tests: every LLM call gets a canned response (services/llm/demo.py); no keys used.
+    fake_llm: bool = False
     default_max_clip_seconds: float = 5.0  # until a real video model is selected (M2+)
     # Video (Section 11.6): "Generate all" selects the first keyframe and queues the video when true.
     auto_approve_keyframes: bool = False

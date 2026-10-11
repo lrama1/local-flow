@@ -14,6 +14,7 @@ from localflow.services.board import BoardService
 from localflow.services.characters.library import LibraryService
 from localflow.services.characters.service import CharacterService
 from localflow.services.characters.templates import TemplateService
+from localflow.services.collections import CollectionService
 from localflow.services.events import EventBus
 from localflow.services.imagegen import ImageGenService
 from localflow.services.jobs.generation import GenerationService
@@ -26,6 +27,7 @@ from localflow.services.registry.civitai import CivitaiClient
 from localflow.services.registry.downloads import DownloadRunner
 from localflow.services.registry.hf import HfBackend
 from localflow.services.registry.service import RegistryService
+from localflow.services.review import ReviewService
 from localflow.services.secrets import SecretStore, build_secret_store
 from localflow.services.story.service import StoryService
 from localflow.services.timeline.export import ExportRunner
@@ -60,6 +62,8 @@ class Services:
     exports: ExportRunner
     voices: VoiceService
     audiogen: AudioGenService
+    collections: CollectionService
+    review: ReviewService
 
 
 def build_services(
@@ -154,6 +158,8 @@ def build_services(
         exports,
         voices,
         audiogen,
+        CollectionService(db, bus),
+        ReviewService(settings, assets, imagegen, llm),
     )
 
 

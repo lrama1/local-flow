@@ -4,7 +4,8 @@ A locally-running, single-user AI filmmaking studio inspired by Google Flow. Rea
 backend; image/video/audio generation runs on your GPU. See [SPEC.md](SPEC.md) for the full design and
 [docs/DECISIONS.md](docs/DECISIONS.md) for implementation decisions.
 
-**Status:** milestones **M0** through **M6** are done.
+**Status:** milestones **M0** through **M7** are done. New here? Start with [Quick start](#quick-start-windows)
+and [Your first film](#your-first-film).
 
 - **M0:** projects, a SQLite-backed job queue, a supervised GPU worker process running the **FakeEngine**
   (placeholder outputs, no GPU needed), live progress over WebSocket, the Playground, and the app shell.
@@ -33,6 +34,145 @@ backend; image/video/audio generation runs on your GPU. See [SPEC.md](SPEC.md) f
   description), shots get **dialogue** and **sound effects** made to fit the clip (MMAudio reads the take's
   picture), and scenes or the whole film get **music** (MusicGen). Everything lands on the timeline and in
   the export.
+- **M7:** polish. The **Assets** tab is a full library (filters, search, collections, bulk actions, upload,
+  reuse in the Playground, frame extraction). **Check consistency** has a vision LLM compare a keyframe or
+  take with the references. **Settings → Diagnostics** runs health checks and downloads a support bundle.
+  A Playwright smoke test covers idea → export.
+
+## Quick start (Windows)
+
+1. **Install the tools** in PowerShell:
+
+   ```powershell
+   winget install astral-sh.uv Gyan.FFmpeg OpenJS.NodeJS.LTS Git.Git
+   ```
+
+   Then **close and reopen the terminal** (and VS Code, if you use its terminal) so it picks up the new
+   `PATH`. Check with `uv --version; node --version; ffmpeg -version`.
+2. **GPU driver** (for real generation): an NVIDIA GPU with 16 GB+ VRAM and a driver new enough for CUDA 13,
+   meaning the header of `nvidia-smi` says `CUDA Version: 13.0` or higher. Update it from nvidia.com or the
+   NVIDIA app if not. No NVIDIA GPU? Everything still runs and makes placeholder images and videos (the
+   FakeEngine).
+3. **Clone and install:**
+
+   ```powershell
+   git clone https://github.com/lrama1/local-flow.git
+   cd local-flow
+   npm run setup
+   ```
+
+   This runs `uv sync` in `backend/` (uv fetches Python 3.12 and the packages, including the CUDA 13 build of
+   PyTorch from download.pytorch.org: about 4 GB) and `npm install` in `frontend/` (about 250 MB). Without an
+   NVIDIA GPU, skip the GPU packages: `cd backend; uv sync --no-group gpu; cd ..\frontend; npm install`.
+4. **Check that PyTorch sees the GPU:**
+
+   ```powershell
+   cd backend; uv run python -c "import torch; print(torch.__version__, torch.cuda.is_available())"; cd ..
+   ```
+
+   Expect something like `2.14.1+cu130 True`.
+5. **Choose where data goes** (optional). Models need 20–80 GB, and everything lives in
+   `%USERPROFILE%\LocalFlow` unless you set another folder before the first start, e.g.
+   `setx LOCALFLOW_DATA_DIR D:\LocalFlow`.
+6. **Add an LLM key** for the story tools, e.g. `setx OPENAI_API_KEY "sk-..."` (or `ANTHROPIC_API_KEY`,
+   `OPENROUTER_API_KEY`), or paste one later in **Settings → API keys**. See [API keys](#api-keys).
+7. **Start:**
+
+   ```powershell
+   npm start            # builds the frontend, then serves everything on http://127.0.0.1:8765
+   ```
+
+   Open <http://127.0.0.1:8765>. For development, `npm run dev` runs the backend on :8765 plus Vite with hot
+   reload on <http://127.0.0.1:5173> (the backend restarts on `.py` changes).
+8. **Open Settings → Diagnostics.** Every check should be green: data folder writable, disk space, ffmpeg,
+   NVIDIA GPU, PyTorch + CUDA, GPU worker, secret storage (Windows Credential Manager) and LLM providers.
+   Amber or red rows say what to fix.
+
+## Your first film
+
+1. **Models → Catalog:** install what you need. Shared parts (text encoders, VAEs) download once, so the
+   total is less than the sum.
+
+   | Model | Used for | Download |
+   |---|---|---|
+   | FLUX.1 [dev] · GGUF Q4_K_S | ingredient images, keyframes from text | 16.7 GB |
+   | FLUX.1 Kontext [dev] · GGUF Q4_K_M | keyframes composed from references, character views | 16.9 GB |
+   | Wan 2.2 TI2V-5B · GGUF Q8_0 | video (5 s clips at 1280×704) | 19.6 GB |
+   | Kokoro-82M | dialogue | 0.4 GB |
+   | MMAudio large 44.1 kHz v2 | sound effects synced to the picture | 10.7 GB |
+   | MusicGen small | music | 2.4 GB |
+
+   FLUX.1 [dev] is gated: accept its license on Hugging Face and add an `HF_TOKEN` (Settings → API keys can
+   import an existing `hf auth login`). Kokoro and MMAudio need `allow_pickle_weights = true` in
+   `config.toml` ([Audio](#audio-m6)). Acknowledge each model's license on its card before first use.
+2. **Projects → New project.** On **Story**, write a few sentences, then **Refine** → **Build bible** →
+   **Break down into shots**. A 30-second story costs about $0.02–0.03 with `gpt-5.4-mini`.
+3. **Ingredients:** generate images for the characters, locations and props and pick a primary for each, or
+   use **New character** for the wizard with consistent extra views.
+4. **Shots board:** open a shot, **Compose keyframe**, pick one, then **Generate video**. Or use
+   **Generate all** for every shot. **Check consistency** compares a keyframe or take with the references.
+5. **Audio** (shot panel): dialogue and sound effects. Music is generated from the timeline.
+6. **Timeline → Auto-assemble**, adjust trims, order and transitions, then **Export MP4**. Exports also
+   appear on the **Assets** tab.
+
+The **Tutorials** page (sidebar) has narrated walkthroughs of steps 2–4.
+
+## Troubleshooting
+
+- **`'uv' is not recognized`** (or `node`, `ffmpeg`): the terminal is older than the install. Fully quit and
+  reopen VS Code or the terminal (a new VS Code terminal tab inherits VS Code's old environment), or refresh
+  the current PowerShell session:
+  `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
+- **Diagnostics shows "PyTorch + CUDA" in red, or outputs are placeholders:** update the NVIDIA driver until
+  `nvidia-smi` reports CUDA 13.0+, then rerun `cd backend; uv sync`. If `torch.__version__` ends in `+cpu`,
+  the CUDA build wasn't installed: `uv sync --reinstall-package torch`. The GPU worker check shows why the
+  FakeEngine was chosen.
+- **ffmpeg not found:** `winget install Gyan.FFmpeg` and reopen the terminal, or set `ffmpeg_path` and
+  `ffprobe_path` in `config.toml`.
+- **Out of GPU memory:** close other GPU apps and set `vram_profile = "low"` in `config.toml` (video drops to
+  832×480). For video, fewer steps also help.
+- **A gated model won't download:** accept the license on its Hugging Face page, then press **Check again**
+  on the card.
+- **Port 8765 is in use:** `$env:LOCALFLOW_PORT = 9000; npm start`.
+- **Kokoro or MMAudio won't install:** set `allow_pickle_weights = true` in `config.toml` and restart.
+- **Reporting a bug:** **Settings → Diagnostics → Support bundle** downloads a zip with the checks,
+  versions, `config.toml` and recent logs. Keys and tokens are redacted, and no media or database is
+  included. The logs (`localflow.log`, `worker.log` in `<data dir>\logs\`) can also be read in Diagnostics.
+
+## Linux
+
+Install uv (`curl -LsSf https://astral.sh/uv/install.sh | sh`), Node.js 20+, ffmpeg (e.g.
+`sudo apt install ffmpeg`) and an NVIDIA driver with CUDA 13 support, then follow the same steps from
+`npm run setup`. Data goes to `~/LocalFlow`. Keys come from your shell environment, or Settings stores them
+in the Secret Service keyring (GNOME Keyring, KWallet). Without a keyring, they go to an encrypted file in
+the data dir; Diagnostics shows which.
+
+## Library, review and diagnostics (M7)
+
+- **Assets tab (the project's library):**
+  - Filter by type, source (generated, uploaded, extracted frames, exports), model, tag, scene and ingredient,
+    and search prompts, dialogue lines and file names. Sort newest or oldest first.
+  - **Collections** (left) group assets, e.g. "Storyboard" or "Hero looks"; **Favorites** has starred ones.
+  - Tick the box on a tile (it appears on hover) to select several. Then add them to a collection, tag,
+    favorite or delete them. While selecting, clicking a tile adds it to the selection.
+  - **Upload** (or drop files on the library) adds images, videos and audio. Videos that aren't H.264 MP4
+    (MOV, WebM, VP9…) are converted (odd sizes lose a pixel row or column), and MP3/FLAC/OGG become WAV.
+- **Asset details** (click a tile):
+  - Preview, size, model, seed, the full generation settings, tags and collections, and the assets it was
+    made from.
+  - **Reuse settings** opens the Playground with the same kind, prompt, seed, size, model, LoRAs and inputs,
+    even if they're in another project. Playground outputs keep their @mentions; a project's shots and
+    ingredients reuse the full prompt they were generated with.
+  - **Use as keyframe** (pick a shot, first or last frame) and **Use as ingredient reference** (the primary
+    image, or a character view). For a video, both use the frame under the playhead.
+  - Videos also have **Extract frame** (a new image at the playhead, on the frame grid) and **Extend**: a
+    shot's take is extended on its shot, and other videos open in Playground → Extend.
+- **Check consistency** (shot panel, under the keyframe and the take): a vision-capable LLM compares the
+  image (or two frames of the take) with the shot's reference images. It lists concrete mismatches and
+  proposes a revised prompt; **Apply fix** puts it in the panel for you to save or regenerate. It needs a
+  vision model for the `vision_review` purpose (gpt-5.4-mini works) and costs about $0.003–0.005 a check.
+- **Settings → Diagnostics:** checks with fixes, versions (torch, CUDA, cuDNN, diffusers…), disk use per
+  data folder, log viewer and the redacted **Support bundle**.
 
 ## Audio (M6)
 
@@ -188,53 +328,6 @@ Default models (override in Settings → Default models, or in `config.toml`):
 `openai/gpt-5.4-mini`, `anthropic/claude-sonnet-5`, `openrouter/anthropic/claude-sonnet-5`. A 30-second
 story (refine + bible + breakdown) costs about $0.02–0.03 with `gpt-5.4-mini`.
 
-## Requirements
-
-- Windows 11 or Linux
-- [uv](https://docs.astral.sh/uv/) (manages Python 3.12 for the backend)
-- Node.js 20+ and npm
-- `ffmpeg` and `ffprobe` on `PATH` (or set `ffmpeg_path` / `ffprobe_path` in `config.toml`)
-- For generation: an NVIDIA GPU with 16 GB+ VRAM (developed on an RTX 5080) and a driver that supports
-  CUDA 13. Without one, the app still runs and uses the FakeEngine.
-
-On Windows: `winget install astral-sh.uv Gyan.FFmpeg OpenJS.NodeJS.LTS`
-
-If a command then reports `'uv' is not recognized` (or `ffmpeg`), the terminal still has the PATH from before
-the install. Fully quit and reopen VS Code (a new terminal tab inherits VS Code's old environment), or refresh
-the current PowerShell session:
-`$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`
-
-## Setup
-
-```powershell
-npm run setup        # uv sync (backend) + npm install (frontend)
-```
-
-`uv sync` installs the GPU stack (PyTorch CUDA 13 build, diffusers, transformers; about 3.5 GB). On a machine
-without an NVIDIA GPU, skip it with `cd backend; uv sync --no-group gpu`. `engine = "auto"` (the default)
-uses the GPU when it's usable and the FakeEngine otherwise; set `engine = "fake"` to force placeholders.
-
-## Run
-
-```powershell
-npm run dev          # backend on :8765 + Vite on :5173, backend restarts on .py changes
-```
-
-Open <http://127.0.0.1:5173>. Create a project, write a few sentences on the **Story** tab, then **Refine** →
-**Build bible** → **Break down into shots**, and open the **Shots board**. Install an image model from
-**Models → Catalog** (FLUX.1 [dev] Q4_K_S is recommended for 16 GB GPUs; FLUX Kontext enables keyframe
-composition), then generate ingredient images on the **Ingredients** tab and keyframes from the shot panel.
-The **Playground** runs any generation type directly.
-
-New to LocalFlow? Open **Tutorials** in the sidebar for narrated walkthroughs (with captions and chapters)
-of the story pipeline and of reference images and keyframes.
-
-Production-style single process (FastAPI serves the built frontend):
-
-```powershell
-npm start            # builds frontend/dist, then serves everything on http://127.0.0.1:8765
-```
-
 ## Data and configuration
 
 Everything lives in the data directory: `%USERPROFILE%\LocalFlow` on Windows, `~/LocalFlow` elsewhere
@@ -244,14 +337,23 @@ set with `setx` is honored even in terminals opened before it). It holds `localf
 
 Every `config.toml` key can be overridden with an env var `LOCALFLOW_<KEY>`, e.g. `LOCALFLOW_PORT=9000`.
 The server only binds to `127.0.0.1`, and every API/WebSocket call needs the per-launch token.
+`engine = "auto"` (the default) uses the GPU when it's usable and the FakeEngine otherwise; set
+`engine = "fake"` to force placeholders. `fake_llm = true` answers every LLM call with a canned demo story
+(no key or network needed; for offline demos and the smoke test).
 
 ## Develop
 
 ```powershell
 npm test             # backend pytest (spawns the FakeEngine worker) + frontend vitest
+npm run test:e2e     # Playwright smoke test: build, then idea → story → generate all → timeline → export
 npm run lint         # ruff, ruff format --check, mypy, eslint, prettier, tsc
 npm run typegen      # regenerate frontend API types from the backend OpenAPI schema
 ```
+
+The smoke test (`frontend/e2e/`) starts its own server on port 8799 with a fresh data dir in the temp
+folder, the FakeEngine and `fake_llm`, so it needs no GPU, keys or network, and never touches your data or
+keyring. It takes about 15 s. Run `cd frontend; npx playwright install chromium` once first. A failed run
+keeps a trace and video in `frontend/test-results/` (`npx playwright show-report`).
 
 Real-GPU regression test (Flux → Kontext → SDXL, then unload to baseline; about 2 minutes, uses the models
 installed in your data dir and skips missing ones): `cd backend; uv run pytest -m gpu`.

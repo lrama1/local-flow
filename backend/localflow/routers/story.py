@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 
 from localflow.routers.cancel import run_cancellable
+from localflow.schemas.review import ReviewBody, ShotReviewOut
 from localflow.schemas.story import (
     BibleBody,
     BreakdownBody,
@@ -72,3 +73,11 @@ async def rewrite_prompt(
     shot_id: str, body: RewriteBody, request: Request, svc: Services = Depends(services)
 ) -> ShotRewriteResult:
     return await run_cancellable(request, svc.story.rewrite_shot(shot_id, body))
+
+
+@router.post("/shots/{shot_id}/review", response_model=ShotReviewOut, tags=["shots"])
+async def review_shot(
+    shot_id: str, request: Request, body: ReviewBody | None = None, svc: Services = Depends(services)
+) -> ShotReviewOut:
+    """Vision review: does the keyframe (default) or `asset_id` match the shot's reference images?"""
+    return await run_cancellable(request, svc.review.review_shot(shot_id, body or ReviewBody()))

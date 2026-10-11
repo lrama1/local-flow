@@ -5,6 +5,119 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/api/system/diagnostics": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Diagnostics",
+        "description": "Checks (data-dir write test, ffmpeg, GPU, CUDA, worker, secret storage), versions, storage, logs.\nFolder sizes are cached for a minute; `refresh` recounts.",
+        "operationId": "get_diagnostics_api_system_diagnostics_get",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Refresh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/system/logs/{name}": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Log",
+        "operationId": "get_log_api_system_logs__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          },
+          {
+            "name": "lines",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Lines"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogTail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/system/diagnostics/bundle": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Diagnostics Bundle",
+        "description": "A redacted zip (diagnostics, status, config.toml, recent logs) to attach to a bug report.",
+        "operationId": "diagnostics_bundle_api_system_diagnostics_bundle_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -487,6 +600,92 @@
             "description": "generated | uploaded | extracted | export | imported"
           },
           {
+            "name": "collection",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Assets in this collection",
+              "title": "Collection"
+            },
+            "description": "Assets in this collection"
+          },
+          {
+            "name": "model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Made with this model (entry id or name)",
+              "title": "Model"
+            },
+            "description": "Made with this model (entry id or name)"
+          },
+          {
+            "name": "scene_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Made for a shot of this scene",
+              "title": "Scene Id"
+            },
+            "description": "Made for a shot of this scene"
+          },
+          {
+            "name": "featuring",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Ingredient id: its candidates, prompts mentioning it, shots it's in",
+              "title": "Featuring"
+            },
+            "description": "Ingredient id: its candidates, prompts mentioning it, shots it's in"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "newest",
+                "oldest"
+              ],
+              "type": "string",
+              "default": "newest",
+              "title": "Sort"
+            }
+          },
+          {
             "name": "offset",
             "in": "query",
             "required": false,
@@ -517,6 +716,492 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Page_AssetOut_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/assets/facets": {
+      "get": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Asset Facets",
+        "description": "Filter values for the asset library, with counts.",
+        "operationId": "asset_facets_api_projects__project_id__assets_facets_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetFacets"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/assets/bulk": {
+      "post": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Bulk Assets",
+        "description": "Tag, untag, (un)favorite or delete several of the project's assets.",
+        "operationId": "bulk_assets_api_projects__project_id__assets_bulk_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkAssetsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkAssetsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{asset_id}/extract-frame": {
+      "post": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Extract Frame",
+        "description": "A still of a video at `time_s` (snapped to its frame grid), as a new \"extracted\" image asset.",
+        "operationId": "extract_frame_api_assets__asset_id__extract_frame_post",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Asset Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractFrameBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{asset_id}/collections": {
+      "get": {
+        "tags": [
+          "assets"
+        ],
+        "summary": "Asset Collections",
+        "description": "Ids of the collections this asset is in.",
+        "operationId": "asset_collections_api_assets__asset_id__collections_get",
+        "parameters": [
+          {
+            "name": "asset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Asset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Asset Collections Api Assets  Asset Id  Collections Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{project_id}/collections": {
+      "get": {
+        "tags": [
+          "assets",
+          "collections"
+        ],
+        "summary": "List Collections",
+        "operationId": "list_collections_api_projects__project_id__collections_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CollectionOut"
+                  },
+                  "title": "Response List Collections Api Projects  Project Id  Collections Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "assets",
+          "collections"
+        ],
+        "summary": "Create Collection",
+        "operationId": "create_collection_api_projects__project_id__collections_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}": {
+      "patch": {
+        "tags": [
+          "assets",
+          "collections"
+        ],
+        "summary": "Update Collection",
+        "operationId": "update_collection_api_collections__collection_id__patch",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "assets",
+          "collections"
+        ],
+        "summary": "Delete Collection",
+        "description": "Deletes the collection; its assets stay.",
+        "operationId": "delete_collection_api_collections__collection_id__delete",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/collections/{collection_id}/assets": {
+      "post": {
+        "tags": [
+          "assets",
+          "collections"
+        ],
+        "summary": "Add To Collection",
+        "operationId": "add_to_collection_api_collections__collection_id__assets_post",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionAssetsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "assets",
+          "collections"
+        ],
+        "summary": "Remove From Collection",
+        "operationId": "remove_from_collection_api_collections__collection_id__assets_delete",
+        "parameters": [
+          {
+            "name": "collection_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Collection Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CollectionAssetsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollectionOut"
                 }
               }
             }
@@ -1808,6 +2493,51 @@
         }
       }
     },
+    "/api/llm/vision": {
+      "get": {
+        "tags": [
+          "settings",
+          "llm"
+        ],
+        "summary": "Llm Vision",
+        "description": "Whether the model a purpose resolves to can read images (features that need it hide otherwise).",
+        "operationId": "llm_vision_api_llm_vision_get",
+        "parameters": [
+          {
+            "name": "purpose",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "vision_review",
+              "title": "Purpose"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisionCapability"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/llm/usage": {
       "get": {
         "tags": [
@@ -2311,6 +3041,67 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ShotRewriteResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/shots/{shot_id}/review": {
+      "post": {
+        "tags": [
+          "story",
+          "shots"
+        ],
+        "summary": "Review Shot",
+        "description": "Vision review: does the keyframe (default) or `asset_id` match the shot's reference images?",
+        "operationId": "review_shot_api_shots__shot_id__review_post",
+        "parameters": [
+          {
+            "name": "shot_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shot Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ReviewBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShotReviewOut"
                 }
               }
             }
@@ -6431,6 +7222,56 @@
         "type": "object",
         "title": "AppSettingsPatch"
       },
+      "AssetFacets": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "favorites": {
+            "type": "integer",
+            "title": "Favorites"
+          },
+          "types": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Types"
+          },
+          "sources": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Sources"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagCount"
+            },
+            "type": "array",
+            "title": "Tags"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCount"
+            },
+            "type": "array",
+            "title": "Models"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "favorites",
+          "types",
+          "sources",
+          "tags",
+          "models"
+        ],
+        "title": "AssetFacets"
+      },
       "AssetOut": {
         "properties": {
           "id": {
@@ -6958,6 +7799,76 @@
         "additionalProperties": false,
         "type": "object",
         "title": "BreakdownBody"
+      },
+      "BulkAssetsBody": {
+        "properties": {
+          "asset_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Asset Ids"
+          },
+          "add_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Add Tags"
+          },
+          "remove_tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Remove Tags"
+          },
+          "favorite": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Favorite"
+          },
+          "delete": {
+            "type": "boolean",
+            "title": "Delete",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "asset_ids"
+        ],
+        "title": "BulkAssetsBody",
+        "description": "Tag, favorite or delete several assets at once."
+      },
+      "BulkAssetsOut": {
+        "properties": {
+          "updated": {
+            "type": "integer",
+            "title": "Updated"
+          },
+          "deleted": {
+            "type": "integer",
+            "title": "Deleted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "updated",
+          "deleted"
+        ],
+        "title": "BulkAssetsOut"
       },
       "CharacterCapabilities": {
         "properties": {
@@ -7759,6 +8670,145 @@
         "title": "Clip",
         "description": "A video clip (sequential; `start_s` is derived from the order, trims and crossfades) or an audio\nclip (placed freely by `start_s`). `in_s`/`out_s` trim the source asset."
       },
+      "CollectionAssetsBody": {
+        "properties": {
+          "asset_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Asset Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "asset_ids"
+        ],
+        "title": "CollectionAssetsBody"
+      },
+      "CollectionCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Description",
+            "default": ""
+          },
+          "asset_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "title": "Asset Ids",
+            "description": "Assets to start with"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CollectionCreate"
+      },
+      "CollectionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "asset_count": {
+            "type": "integer",
+            "title": "Asset Count"
+          },
+          "cover_thumb_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Thumb Url"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "project_id",
+          "name",
+          "description",
+          "asset_count",
+          "cover_thumb_url",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CollectionOut"
+      },
+      "CollectionUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CollectionUpdate"
+      },
       "DeleteModelOut": {
         "properties": {
           "id": {
@@ -7854,6 +8904,117 @@
           "usage"
         ],
         "title": "DescribeOut"
+      },
+      "DiagCheck": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "warn",
+              "error",
+              "skip"
+            ],
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "status",
+          "detail"
+        ],
+        "title": "DiagCheck"
+      },
+      "DiagnosticsOut": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/DiagCheck"
+            },
+            "type": "array",
+            "title": "Checks"
+          },
+          "versions": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Versions"
+          },
+          "storage": {
+            "items": {
+              "$ref": "#/components/schemas/FolderUsage"
+            },
+            "type": "array",
+            "title": "Storage"
+          },
+          "disk_free_mb": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disk Free Mb"
+          },
+          "disk_total_mb": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disk Total Mb"
+          },
+          "logs": {
+            "items": {
+              "$ref": "#/components/schemas/LogFile"
+            },
+            "type": "array",
+            "title": "Logs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "checks",
+          "versions",
+          "storage",
+          "disk_free_mb",
+          "disk_total_mb",
+          "logs"
+        ],
+        "title": "DiagnosticsOut"
       },
       "DialogueLine": {
         "properties": {
@@ -8416,6 +9577,22 @@
         "type": "object",
         "title": "ExtendShotBody"
       },
+      "ExtractFrameBody": {
+        "properties": {
+          "time_s": {
+            "type": "number",
+            "maximum": 36000.0,
+            "minimum": 0.0,
+            "title": "Time S"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "time_s"
+        ],
+        "title": "ExtractFrameBody"
+      },
       "FLF2VBody": {
         "properties": {
           "project_id": {
@@ -8639,6 +9816,35 @@
           "last_asset_id"
         ],
         "title": "FLF2VBody"
+      },
+      "FolderUsage": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "description": "models | projects | library | tmp | logs | database"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path"
+          },
+          "size_mb": {
+            "type": "number",
+            "title": "Size Mb"
+          },
+          "files": {
+            "type": "integer",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "path",
+          "size_mb",
+          "files"
+        ],
+        "title": "FolderUsage"
       },
       "GenerateAllBody": {
         "properties": {
@@ -10841,6 +12047,57 @@
         ],
         "title": "LocationSpec"
       },
+      "LogFile": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "size_kb": {
+            "type": "number",
+            "title": "Size Kb"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Modified"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "size_kb",
+          "modified"
+        ],
+        "title": "LogFile"
+      },
+      "LogTail": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lines",
+            "description": "Oldest first, formatted as `time level logger: message`"
+          },
+          "total_lines": {
+            "type": "integer",
+            "title": "Total Lines"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "lines",
+          "total_lines"
+        ],
+        "title": "LogTail"
+      },
       "LoraRef": {
         "properties": {
           "model_entry_id": {
@@ -10913,6 +12170,30 @@
           "known"
         ],
         "title": "MentionOut"
+      },
+      "ModelCount": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "description": "Model entry id (or name for older assets): the `model` filter value"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "name",
+          "count"
+        ],
+        "title": "ModelCount"
       },
       "ModelEntryOut": {
         "properties": {
@@ -12838,6 +14119,35 @@
         ],
         "title": "RestoreBody"
       },
+      "ReviewBody": {
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id",
+            "description": "Image or video to review; defaults to the selected keyframe, else the take"
+          },
+          "llm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LlmChoice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ReviewBody"
+      },
       "RevisionSummary": {
         "properties": {
           "revision": {
@@ -14180,6 +15490,90 @@
         ],
         "title": "ShotPrompts"
       },
+      "ShotReviewOut": {
+        "properties": {
+          "shot_id": {
+            "type": "string",
+            "title": "Shot Id"
+          },
+          "asset_id": {
+            "type": "string",
+            "title": "Asset Id"
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "keyframe",
+              "end_keyframe",
+              "video"
+            ],
+            "title": "Target"
+          },
+          "prompt_field": {
+            "type": "string",
+            "enum": [
+              "keyframe_prompt",
+              "end_keyframe_prompt",
+              "video_prompt"
+            ],
+            "title": "Prompt Field",
+            "description": "The shot field `suggested_prompt_fix` replaces"
+          },
+          "current_prompt": {
+            "type": "string",
+            "title": "Current Prompt"
+          },
+          "consistent": {
+            "type": "boolean",
+            "title": "Consistent"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issues"
+          },
+          "suggested_prompt_fix": {
+            "type": "string",
+            "title": "Suggested Prompt Fix"
+          },
+          "references": {
+            "items": {
+              "$ref": "#/components/schemas/RefOut"
+            },
+            "type": "array",
+            "title": "References",
+            "description": "The reference images it was compared against"
+          },
+          "frames_s": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Frames S",
+            "description": "For takes: the reviewed frame times (empty for images)"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/UsageOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shot_id",
+          "asset_id",
+          "target",
+          "prompt_field",
+          "current_prompt",
+          "consistent",
+          "issues",
+          "suggested_prompt_fix",
+          "references",
+          "frames_s",
+          "usage"
+        ],
+        "title": "ShotReviewOut"
+      },
       "ShotRewriteResult": {
         "properties": {
           "shot_id": {
@@ -15194,6 +16588,18 @@
             ],
             "title": "Cuda Version"
           },
+          "cuda_available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cuda Available",
+            "description": "From the worker; None = not reported"
+          },
           "diffusers_version": {
             "anyOf": [
               {
@@ -15808,6 +17214,24 @@
         "additionalProperties": false,
         "type": "object",
         "title": "TTSBody"
+      },
+      "TagCount": {
+        "properties": {
+          "tag": {
+            "type": "string",
+            "title": "Tag"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tag",
+          "count"
+        ],
+        "title": "TagCount"
       },
       "TemplateCreate": {
         "properties": {
@@ -17062,6 +18486,49 @@
         ],
         "title": "ViewsOut"
       },
+      "VisionCapability": {
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model",
+            "description": "provider/model the purpose resolves to"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purpose",
+          "available",
+          "model",
+          "reason"
+        ],
+        "title": "VisionCapability"
+      },
       "VoiceCreate": {
         "properties": {
           "name": {
@@ -17527,6 +18994,18 @@
               }
             ],
             "title": "Error"
+          },
+          "runtime": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime"
           }
         },
         "type": "object",

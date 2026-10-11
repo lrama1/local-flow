@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import base64
-import io
 import logging
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
 from sqlmodel import select
 
 from localflow.config import Settings
@@ -46,6 +43,7 @@ from localflow.services.jobs.generation import GenerationService
 from localflow.services.llm.service import LLMService
 from localflow.services.llm.templates import render
 from localflow.services.llm.types import LLMError, StructuredResult
+from localflow.services.media.images import jpeg_data_url
 from localflow.services.projects import ProjectService
 from localflow.services.registry.service import RegistryService
 from localflow.services.voices import VoiceService
@@ -465,13 +463,7 @@ class CharacterService:
 
 
 def _data_url(path: Path) -> str:
-    """A downscaled JPEG data URL (vision models don't need full resolution; it also caps cost)."""
-    with Image.open(path) as im:
-        img = im.convert("RGB")
-        img.thumbnail((_DESCRIBE_MAX_SIDE, _DESCRIBE_MAX_SIDE))
-        buf = io.BytesIO()
-        img.save(buf, "JPEG", quality=88)
-    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+    return jpeg_data_url(path, _DESCRIBE_MAX_SIDE)
 
 
 def _usage_out(res: StructuredResult[Any]) -> UsageOut:

@@ -2,6 +2,8 @@ from localflow.models.base import new_id, utcnow
 from localflow.models.tables import (
     Asset,
     CharacterTemplate,
+    Collection,
+    CollectionAsset,
     Ingredient,
     IngredientAsset,
     Job,
@@ -20,6 +22,8 @@ from localflow.models.tables import (
 __all__ = [
     "Asset",
     "CharacterTemplate",
+    "Collection",
+    "CollectionAsset",
     "Ingredient",
     "IngredientAsset",
     "Job",

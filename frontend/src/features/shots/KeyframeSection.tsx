@@ -18,6 +18,7 @@ import { Badge, Label, NativeSelect } from "@/components/ui/primitives";
 import { gateLicense } from "@/features/models/gateLicense";
 import { cn } from "@/lib/utils";
 import { MAX_REFERENCES, referenceIngredients, type KeyframeRun, type KeyframeWhich } from "./references";
+import { ReviewCheck, type PromptField } from "./ReviewCheck";
 
 type Mode = KeyframeBody["mode"];
 
@@ -122,6 +123,7 @@ export function KeyframeSection({
   beforeGenerate,
   shotType,
   onSaveReferences,
+  onApplyFix,
 }: {
   shot: Shot;
   projectId: string;
@@ -136,6 +138,8 @@ export function KeyframeSection({
   shotType?: string;
   /** Saves the per-shot reference override (null = automatic), together with any unsaved panel edits. */
   onSaveReferences?: (ids: string[] | null) => Promise<unknown>;
+  /** Puts a vision-review prompt fix into the panel's draft. */
+  onApplyFix?: (field: PromptField, text: string) => void;
 }) {
   const [which, setWhich] = useState<KeyframeWhich>("start");
   const [mode, setMode] = useState<Mode>("auto");
@@ -223,6 +227,15 @@ export function KeyframeSection({
           </span>
         )}
       </div>
+      {selectedId && selectedRefs.length > 0 && (
+        <ReviewCheck
+          shotId={shot.id}
+          assetId={selectedId}
+          what="keyframe"
+          beforeReview={beforeGenerate}
+          onApplyFix={onApplyFix}
+        />
+      )}
 
       <div className="space-y-1">
         <div className="flex items-center gap-1.5">

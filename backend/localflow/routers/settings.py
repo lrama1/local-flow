@@ -8,11 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from localflow.errors import bad_request
 from localflow.routers.cancel import run_cancellable
+from localflow.schemas.review import VisionCapability
 from localflow.schemas.story import LlmChoice
 from localflow.services.container import Services, services
 from localflow.services.keys import SecretStatus
 from localflow.services.llm.service import ProviderStatus, UsageSummary
-from localflow.services.llm.types import LLMModelInfo, ProviderName
+from localflow.services.llm.types import PURPOSES, LLMModelInfo, ProviderName
 
 router = APIRouter(prefix="/api", tags=["settings"])
 
@@ -36,16 +37,7 @@ class SecretValue(BaseModel):
     value: str = Field(min_length=1, max_length=4096)
 
 
-_PURPOSES = [
-    "*",
-    "refine",
-    "bible",
-    "breakdown",
-    "prompt_rewrite",
-    "character_expand",
-    "character_describe",
-    "voice_design",
-]
+_PURPOSES: list[str] = ["*", *PURPOSES]
 
 
 def _settings_out(svc: Services) -> AppSettingsOut:
@@ -121,6 +113,14 @@ async def llm_models(
     request: Request, provider: ProviderName, refresh: bool = False, svc: Services = Depends(services)
 ) -> list[LLMModelInfo]:
     return await run_cancellable(request, svc.llm.list_models(provider, refresh=refresh))
+
+
+@router.get("/llm/vision", response_model=VisionCapability, tags=["llm"])
+def llm_vision(purpose: str = "vision_review", svc: Services = Depends(services)) -> VisionCapability:
+    """Whether the model a purpose resolves to can read images (features that need it hide otherwise)."""
+    if purpose not in PURPOSES:
+        raise bad_request("unknown_purpose", f"Unknown purpose: {purpose}")
+    return svc.review.capability(purpose)
 
 
 @router.get("/llm/usage", response_model=UsageSummary, tags=["llm"])

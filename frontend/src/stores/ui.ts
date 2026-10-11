@@ -34,6 +34,15 @@ interface UiState {
   /** A generation was refused until a model's license is acknowledged; retried after (Section 9.5). */
   licensePrompt: LicensePrompt | null;
   setLicensePrompt: (p: LicensePrompt | null) => void;
+
+  /** "Reuse settings" from the asset library: the Playground opens with these (Section 13). */
+  playgroundPrefill: PlaygroundPrefill | null;
+  setPlaygroundPrefill: (p: PlaygroundPrefill | null) => void;
+}
+
+export interface PlaygroundPrefill {
+  kind: string;
+  form: Record<string, unknown>;
 }
 
 export interface LicensePrompt {
@@ -76,4 +85,7 @@ export const useUi = create<UiState>((set) => ({
 
   licensePrompt: null,
   setLicensePrompt: (licensePrompt) => set({ licensePrompt }),
+
+  playgroundPrefill: null,
+  setPlaygroundPrefill: (playgroundPrefill) => set({ playgroundPrefill }),
 }));
