@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/primitives";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { IngredientsTab } from "@/features/ingredients/IngredientsTab";
+import { DraftModeToggle } from "@/features/projects/DraftModeToggle";
 import { ShotsBoard } from "@/features/shots/ShotsBoard";
 import { StoryTab } from "@/features/story/StoryTab";
 import { TimelineTab } from "@/features/timeline/TimelineTab";
@@ -53,18 +54,21 @@ export function ProjectWorkspace() {
             {project.aspect_ratio} · {project.fps} fps
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            if (window.confirm(`Delete "${project.name}" and all of its files? This can't be undone.`)) {
-              del.mutate(project.id, { onSuccess: () => void navigate("/projects") });
-            }
-          }}
-        >
-          <Trash2Icon />
-          Delete
-        </Button>
+        <div className="flex items-start gap-3">
+          <DraftModeToggle project={project} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (window.confirm(`Delete "${project.name}" and all of its files? This can't be undone.`)) {
+                del.mutate(project.id, { onSuccess: () => void navigate("/projects") });
+              }
+            }}
+          >
+            <Trash2Icon />
+            Delete
+          </Button>
+        </div>
       </div>
       <Tabs value={tab} onValueChange={(v) => void navigate(`/projects/${project.id}/${v}`)}>
         <TabsList>

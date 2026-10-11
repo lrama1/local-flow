@@ -234,7 +234,7 @@ All IDs are ULIDs (strings). All tables have `created_at` and `updated_at`. JSON
 ### 6.1 Tables
 
 **projects**
-`id, name, description, aspect_ratio ("16:9"|"9:16"|"1:1"), fps (int, default 24), default_video_model_id, default_image_model_id, style_notes (text), archived (bool)`
+`id, name, description, aspect_ratio ("16:9"|"9:16"|"1:1"), fps (int, default 24), default_video_model_id, default_image_model_id, draft_mode (bool, default false; Section 11.8), style_notes (text), archived (bool)`
 
 **stories** (one active per project; keep revisions)
 `id, project_id, revision (int), raw_idea (text), refined_story (text), bible_json (StoryBible), llm_provider, llm_model, status ("draft"|"refined"|"broken_down")`
@@ -474,6 +474,7 @@ Sends a keyframe (or two frames of a take, at 30% and 70%) and the shot's refere
 | Video-to-audio SFX | MMAudio | Standalone package |
 | Music (optional) | ACE-Step or MusicGen | |
 | Camera/motion LoRAs | Wan-compatible LoRAs from HF/Civitai | Optional |
+| Fast drafts (images, keyframes, video) | FLUX.1 dev / Kontext + Turbo-Alpha; Wan 2.2 TI2V-5B Turbo | `tier: draft`, Section 11.8 |
 
 ### 9.3 Hugging Face integration
 - Use `huggingface_hub` (`snapshot_download` with `allow_patterns` to fetch only needed files, `hf_hub_download` for single files). Pass `hf_token` from the secret store for gated repos.
@@ -641,6 +642,19 @@ The total respects the edit model's maximum reference count, falling back to the
   - I2V, FLF2V, and extend prompts: `name` only (appearance comes from the keyframe).
   - Mentioned ingredients are added to the shot's `ingredient_ids_json`, so they become keyframe references.
 - `POST /prompts/resolve` previews the resolved prompt and the referenced ingredients.
+
+### 11.8 Draft models and Draft mode
+- The catalog marks fast distilled variants as `tier: draft`. They are separate model entries that share their
+  files with the final model, so they appear in every model picker with their own default steps and guidance:
+  - **FLUX.1 [dev] Q4_K_S + Turbo-Alpha** (8 steps) and **FLUX.1 Kontext Q4_K_M + Turbo-Alpha** (8 steps). Each
+    has a `lora` part (alimama-creative/FLUX.1-Turbo-Alpha) that the FLUX adapters always apply, on top of any
+    LoRAs the job asks for.
+  - **Wan 2.2 TI2V-5B Turbo Q8_0** (4 steps, no guidance pass): a plain checkpoint for the Wan adapter.
+- A project's **Draft mode** (`projects.draft_mode`, a Final/Draft switch in the project header) makes the default
+  model for jobs that don't name one prefer installed draft models, falling back to the normal choice when none is
+  installed. A model chosen by hand always wins. Without Draft mode, draft models rank after final ones.
+- Measured on an RTX 5080 (DECISIONS: Draft models): image 42 → 17 s, keyframe 80 → 29 s, 3-second 720p clip
+  295 → 52 s.
 
 ---
 

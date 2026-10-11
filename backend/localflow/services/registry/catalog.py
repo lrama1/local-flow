@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -44,6 +44,7 @@ class CatalogEntry(BaseModel):
     license_url: str
     approx_size_gb: float
     recommended: bool = False
+    tier: Literal["final", "draft"] = "final"
     experimental: bool = False
     requires_pickle: bool = False
     notes: str = ""
@@ -78,6 +79,7 @@ def _apply(row: ModelEntry, e: CatalogEntry) -> None:
         **(row.meta_json or {}),
         "purpose": e.purpose,
         "recommended": e.recommended,
+        "tier": e.tier,
         "approx_size_bytes": int(e.approx_size_gb * 1e9),
         "render": e.render,
     }

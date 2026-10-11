@@ -58,6 +58,7 @@ class ModelEntryOut(BaseModel):
     description: str
     purpose: str | None = None
     recommended: bool = False
+    tier: Literal["final", "draft"] = "final"
     kind: str
     capabilities: list[str]
     adapter_key: str | None

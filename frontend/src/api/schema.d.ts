@@ -3943,6 +3943,12 @@ export interface components {
              * @default false
              */
             recommended?: boolean;
+            /**
+             * Tier
+             * @default final
+             * @enum {string}
+             */
+            tier?: "final" | "draft";
             /** Kind */
             kind: string;
             /** Capabilities */
@@ -4265,6 +4271,11 @@ export interface components {
             /** Default Image Model Id */
             default_image_model_id?: string | null;
             /**
+             * Draft Mode
+             * @default false
+             */
+            draft_mode?: boolean;
+            /**
              * Style Notes
              * @default
              */
@@ -4286,6 +4297,8 @@ export interface components {
             default_video_model_id: string | null;
             /** Default Image Model Id */
             default_image_model_id: string | null;
+            /** Draft Mode */
+            draft_mode: boolean;
             /** Style Notes */
             style_notes: string;
             /** Archived */
@@ -4317,6 +4330,8 @@ export interface components {
             default_video_model_id?: string | null;
             /** Default Image Model Id */
             default_image_model_id?: string | null;
+            /** Draft Mode */
+            draft_mode?: boolean | null;
             /** Style Notes */
             style_notes?: string | null;
             /** Archived */

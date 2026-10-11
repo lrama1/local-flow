@@ -68,6 +68,12 @@ log = logging.getLogger("localflow.registry")
 Report = Callable[[int, int], None]
 _ACTIVE = ("installed", "downloading")
 _COMPONENT_KINDS = ("vae", "text_encoder")
+
+
+def _is_draft(e: ModelEntry) -> bool:
+    return (e.meta_json or {}).get("tier") == "draft"
+
+
 _SAFE_NAME = re.compile(r"[^A-Za-z0-9._ ()\-]+")
 _TAG = re.compile(r"<[^>]+>")
 
@@ -215,6 +221,7 @@ class RegistryService:
             description=e.description,
             purpose=meta.get("purpose"),
             recommended=bool(meta.get("recommended")),
+            tier="draft" if meta.get("tier") == "draft" else "final",
             kind=e.kind,
             capabilities=list(e.capabilities_json or []),
             adapter_key=e.adapter_key,
@@ -1178,10 +1185,17 @@ class RegistryService:
         return LoraSpec(entry_id=e.id, name=e.name, path=str(path), weight=weight).to_dict()
 
     def default_entry(
-        self, kind: str, *, adapter_key: str | None, usable: set[str] | None, preferred: list[str | None]
+        self,
+        kind: str,
+        *,
+        adapter_key: str | None,
+        usable: set[str] | None,
+        preferred: list[str | None],
+        draft: bool = False,
     ) -> ModelEntry | None:
         """The model a job runs on when none is chosen: the project default, else the first installed
-        catalog-ordered entry whose adapter can run `kind` (Section 11)."""
+        catalog-ordered entry whose adapter can run `kind` (Section 11). Draft models come after final ones,
+        unless `draft` (the project's Draft mode) puts them first; with none installed, it falls back."""
         candidates = [
             e
             for e in self.list_entries(status="installed", capability=kind)
@@ -1190,6 +1204,9 @@ class RegistryService:
             and (adapter_key is None or e.adapter_key == adapter_key)
             and (usable is None or e.adapter_key in usable)
         ]
+        candidates.sort(key=lambda e: _is_draft(e) != draft)  # stable: catalog order within a tier
+        if draft and candidates and _is_draft(candidates[0]):
+            return candidates[0]
         for pid in preferred:
             for e in candidates:
                 if pid and e.id == pid:

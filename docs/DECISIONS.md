@@ -764,3 +764,46 @@ test. Test data made along the way was removed.
    - Rehearse the flow against the FakeEngine and fake-LLM server (`E2E_PORT=8799 node e2e/serve.mjs`,
      then `--base-url http://127.0.0.1:8799`). It runs in about 5 minutes and skips the waits for real
      jobs.
+
+## Draft models and Draft mode
+
+1. **A draft is a model, not a toggle on a model.** The catalog gets `tier: draft` and three entries that
+   share their files with the final models: FLUX dev Q4 + Turbo-Alpha, Kontext Q4 + Turbo-Alpha, and Wan 5B
+   Turbo. They show up in every existing picker with their own default steps and guidance, so "reuse
+   settings", the Playground, metadata and job history all work unchanged, and no request schema changed.
+2. **Bundled LoRA as a `lora` part.** The two FLUX drafts list Turbo-Alpha as a catalog part. The FLUX
+   adapters add it in `apply_loras`, ahead of the job's own LoRAs, and drop any duplicate when the transformer
+   is reloaded. It isn't fused (GGUF layers can't be), so each step costs a little more than the base model's.
+   The user-facing LoRA picker doesn't show it. Metadata records it like any other LoRA.
+3. **Draft mode is a project setting** (`projects.draft_mode`, migration 0008). `default_entry(..., draft=)`
+   sorts draft entries first in Draft mode and last otherwise, so a user who only installs a draft model still
+   gets it, and nobody gets one by surprise. Four call sites pass the flag: generic job resolution, the
+   keyframe edit model, the video model and the character-view edit model. Explicit picks win. Draft mode
+   with no draft model installed falls back; the project header lists what's missing.
+4. **Measured** on an RTX 5080 through LocalFlow's own adapters (73-frame 1280×704 clips, 1024² images, 1280×720
+   keyframes, the "The Last Rose" project's prompts and keyframes; 1 seed, so impressions, not rankings):
+
+   | | Steps | Time | Verdict |
+   |---|---|---|---|
+   | FLUX dev Q4 (today) | 28 | 42 s | baseline |
+   | + Turbo-Alpha | 8 | 17 s | nearly identical |
+   | FLUX schnell Q4 | 4 | 11 s | different look, drifts from prompts |
+   | FLUX.2 klein 4B | 4 | 11 s (16 s edit) | good, but weaker character identity; 16.4 GB peak |
+   | Kontext Q4 (today) | 28 | 80 s | baseline |
+   | + Turbo-Alpha | 8 | 29 s | nearly identical |
+   | Wan 5B Q8 (today) | 30 | 295 s | baseline |
+   | Wan 5B Turbo Q8 | 4 | 52 s | faithful to the keyframe, a little softer |
+   | FastWan 5B (official, fp8) | 3 | 53 s | drifts from the keyframe |
+
+   Through the app (cold, including model loads): image 32 s, keyframe 38 s, video 58 s.
+5. **Not added, and why.** FastWan: the look drifts after the first frame (part of that may be our fp8
+   loading; its community GGUF also fails to load because of tensor-shape quirks). FLUX.2 klein: character
+   identity and the 16 GB ceiling; worth a later "Fast" option. schnell: a different look rather than the same
+   image sooner. Wan A14B 4-step LoRAs: the Wan adapter has LoRA support switched off. MiniMax H3 and its
+   Turbo LoRAs: the license excludes the US, EU, UK and South Korea, and the 33B model strains 23 GB of RAM.
+6. **Licenses.** Turbo-Alpha is under the FLUX.1 [dev] non-commercial license (inherited), so the two FLUX
+   drafts carry it. The Wan Turbo GGUF repack (hum-ma) says Apache 2.0; the original distillation
+   (quanhaol/Wan2.2-TI2V-5B-Turbo) states none, which the catalog entry says too.
+7. **Left alone.** Draft Wan clips spend 23.5 of their 52 s decoding the video and about 8 s encoding the
+   prompt; the unused negative prompt is still encoded. Both are future speed-ups. The scratch benchmarks and
+   their clips are not part of the repo.

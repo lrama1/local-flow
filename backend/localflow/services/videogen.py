@@ -253,6 +253,7 @@ class VideoGenService:
             adapter_key=None,
             usable=self.generation.model_adapters(kind),
             preferred=[project.default_video_model_id],
+            draft=project.draft_mode,
         )
 
     def _plan(

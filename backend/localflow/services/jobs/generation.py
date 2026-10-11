@@ -111,7 +111,11 @@ class GenerationService:
             [project.default_video_model_id] if kind in _VIDEO_KINDS else [project.default_image_model_id]
         )
         default = self.registry.default_entry(
-            kind, adapter_key=body.adapter_key, usable=self.usable_adapters(kind), preferred=preferred
+            kind,
+            adapter_key=body.adapter_key,
+            usable=self.usable_adapters(kind),
+            preferred=preferred,
+            draft=project.draft_mode,
         )
         if default is None:
             raise conflict(

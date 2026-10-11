@@ -12249,6 +12249,15 @@
             "title": "Recommended",
             "default": false
           },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "final",
+              "draft"
+            ],
+            "title": "Tier",
+            "default": "final"
+          },
           "kind": {
             "type": "string",
             "title": "Kind"
@@ -13250,6 +13259,11 @@
             ],
             "title": "Default Image Model Id"
           },
+          "draft_mode": {
+            "type": "boolean",
+            "title": "Draft Mode",
+            "default": false
+          },
           "style_notes": {
             "type": "string",
             "title": "Style Notes",
@@ -13307,6 +13321,10 @@
             ],
             "title": "Default Image Model Id"
           },
+          "draft_mode": {
+            "type": "boolean",
+            "title": "Draft Mode"
+          },
           "style_notes": {
             "type": "string",
             "title": "Style Notes"
@@ -13346,6 +13364,7 @@
           "fps",
           "default_video_model_id",
           "default_image_model_id",
+          "draft_mode",
           "style_notes",
           "archived",
           "created_at",
@@ -13429,6 +13448,17 @@
               }
             ],
             "title": "Default Image Model Id"
+          },
+          "draft_mode": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Mode"
           },
           "style_notes": {
             "anyOf": [

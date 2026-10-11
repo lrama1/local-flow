@@ -67,6 +67,18 @@ export function useCreateProject() {
   });
 }
 
+export function useUpdateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Schemas["ProjectUpdate"] }) =>
+      unwrap(api.PATCH("/api/projects/{project_id}", { params: { path: { project_id: id } }, body })),
+    onSuccess: (p) => {
+      qc.setQueryData(qk.project(p.id), p);
+      return qc.invalidateQueries({ queryKey: qk.projects });
+    },
+  });
+}
+
 export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({

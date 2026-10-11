@@ -20,6 +20,7 @@ class Project(IdMixin, TimestampMixin, table=True):
     fps: int = 24
     default_video_model_id: str | None = None
     default_image_model_id: str | None = None
+    draft_mode: bool = False
     style_notes: str = ""
     archived: bool = False
 

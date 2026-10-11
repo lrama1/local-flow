@@ -31,7 +31,7 @@ from localflow.worker.adapters.diffusion import (
 from localflow.worker.context import JobContext
 from localflow.worker.images import reference_sheet, save_png, snap
 from localflow.worker.messages import WorkerConfig
-from localflow.worker.spec import ModelSpec
+from localflow.worker.spec import LoraSpec, ModelSpec
 
 log = logging.getLogger("localflow.worker.flux")
 
@@ -153,6 +153,24 @@ class _FluxFamily(DiffusionAdapter):
     def unload(self) -> None:
         self.t5, self.transformer = None, None
         super().unload()
+
+    # --- bundled LoRA (draft models) ---------------------------------------------------------------
+    def _bundled_lora(self) -> LoraSpec | None:
+        """A catalog entry's own `lora` part (e.g. Turbo-Alpha): always on, whatever the job asks for."""
+        spec = self.spec
+        part = spec.part("lora") if spec else None
+        path = part.first(".safetensors") if part else None
+        if spec is None or path is None:
+            return None
+        return LoraSpec(
+            entry_id=f"bundled:{spec.entry_id}", name=path.parent.name or "bundled", path=str(path)
+        )
+
+    def apply_loras(self, loras: list[LoraSpec], ctx: JobContext) -> None:
+        bundled = self._bundled_lora()
+        if bundled is not None:
+            loras = [bundled, *(lo for lo in loras if lo.entry_id != bundled.entry_id)]
+        super().apply_loras(loras, ctx)
 
     # --- prompts -----------------------------------------------------------------------------------
     def _encode(self, prompt: str, max_len: int, ctx: JobContext) -> tuple[torch.Tensor, torch.Tensor]:

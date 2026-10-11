@@ -31,6 +31,7 @@ class ProjectCreate(BaseModel):
     fps: int = Field(default=24, ge=1, le=120)
     default_video_model_id: str | None = None
     default_image_model_id: str | None = None
+    draft_mode: bool = False
     style_notes: str = ""
 
 
@@ -43,6 +44,7 @@ class ProjectUpdate(BaseModel):
     fps: int | None = Field(default=None, ge=1, le=120)
     default_video_model_id: str | None = None
     default_image_model_id: str | None = None
+    draft_mode: bool | None = None
     style_notes: str | None = None
     archived: bool | None = None
 
@@ -55,6 +57,7 @@ class ProjectOut(BaseModel):
     fps: int
     default_video_model_id: str | None
     default_image_model_id: str | None
+    draft_mode: bool
     style_notes: str
     archived: bool
     created_at: datetime

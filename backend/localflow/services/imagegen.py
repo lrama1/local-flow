@@ -342,7 +342,11 @@ class ImageGenService:
         if use_edit and body.model_entry_id is None:
             usable = self.generation.model_adapters("image_edit")
             edit_model = self.registry.default_entry(
-                "image_edit", adapter_key=None, usable=usable, preferred=[project.default_image_model_id]
+                "image_edit",
+                adapter_key=None,
+                usable=usable,
+                preferred=[project.default_image_model_id],
+                draft=project.draft_mode,
             )
             if edit_model is None:
                 if body.mode == "edit":

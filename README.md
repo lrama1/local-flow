@@ -147,6 +147,26 @@ Install uv (`curl -LsSf https://astral.sh/uv/install.sh | sh`), Node.js 20+, ffm
 in the Secret Service keyring (GNOME Keyring, KWallet). Without a keyring, they go to an encrypted file in
 the data dir; Diagnostics shows which.
 
+## Draft mode
+
+Three optional **(draft)** models in **Models → Catalog** trade some quality for speed (about 6 GB extra,
+because they share files with the models above):
+
+| Draft model | Replaces | Steps | Time on an RTX 5080 |
+|---|---|---|---|
+| FLUX.1 [dev] · Q4_K_S + Turbo-Alpha | FLUX.1 [dev] | 8 instead of 28 | image 17 s instead of 42 s |
+| FLUX.1 Kontext [dev] · Q4_K_M + Turbo-Alpha | FLUX.1 Kontext | 8 instead of 28 | keyframe 29 s instead of 80 s |
+| Wan 2.2 TI2V-5B Turbo · Q8_0 | Wan 2.2 TI2V-5B | 4 instead of 30 | 3 s clip 52 s instead of 295 s |
+
+Use the **Final / Draft** switch at the top of a project. In Draft mode, anything you don't pick a model for
+(Generate all, keyframes, character views, new images and videos) uses the installed draft models, then falls
+back to the normal ones. A model you choose in a picker is always used. The switch shows which draft models
+are still missing. Switch back to **Final** to regenerate the keepers.
+
+The FLUX drafts look nearly the same as the full models. The video draft stays faithful to the keyframe but
+is a little softer. Turbo-Alpha uses the FLUX.1 [dev] non-commercial license. The Wan Turbo GGUF is a
+community repack (Apache 2.0); the original distillation states no license.
+
 ## Library, review and diagnostics (M7)
 
 - **Assets tab (the project's library):**
@@ -246,8 +266,8 @@ the data dir; Diagnostics shows which.
 - **Shots tab → Generate all** composes missing keyframes and queues a video for every shot without a take.
   With **Use each new keyframe right away**, it doesn't wait for you to pick keyframes.
 - **Speed on a 16 GB GPU** (RTX 5080): a 5 s 720p clip takes about 10 minutes at the default 30 steps,
-  and a 480p clip about 2.5 minutes. Pick fewer **steps** in the Video section for quick drafts. Peak VRAM
-  is about 10 GB.
+  and a 480p clip about 2.5 minutes. Pick fewer **steps** in the Video section, or use [Draft mode](#draft-mode),
+  for quick drafts. Peak VRAM is about 10 GB.
 - **Playground → Text → video / Image → video / Extend** can pick any installed video model.
 - First/last-frame shots need the **Wan 2.1 FLF2V** entry: TI2V-5B can only start from a first frame.
 

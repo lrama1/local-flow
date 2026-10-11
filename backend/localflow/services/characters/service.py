@@ -286,13 +286,15 @@ class CharacterService:
             chosen = self.registry.get(explicit)
             return chosen.id, chosen.name
         preferred: list[str | None] = []
+        draft = False
         if project_id:
             with self.db.session() as s:
                 p = s.get(Project, project_id)
                 preferred = [p.default_image_model_id] if p else []
+                draft = bool(p and p.draft_mode)
         usable = self.generation.model_adapters("image_edit")
         entry = self.registry.default_entry(
-            "image_edit", adapter_key=None, usable=usable, preferred=preferred
+            "image_edit", adapter_key=None, usable=usable, preferred=preferred, draft=draft
         )
         return (entry.id, entry.name) if entry is not None else None
 

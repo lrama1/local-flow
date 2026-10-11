@@ -11,6 +11,7 @@ import {
   StarIcon,
   Trash2Icon,
   XIcon,
+  ZapIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
@@ -251,6 +252,11 @@ export function ModelCard({ model }: { model: ModelEntry }) {
           {model.experimental && (
             <Badge variant="warning">
               <FlaskConicalIcon className="size-3" /> experimental
+            </Badge>
+          )}
+          {model.tier === "draft" && (
+            <Badge variant="secondary">
+              <ZapIcon className="size-3" /> draft · fast
             </Badge>
           )}
           {model.nsfw && <Badge variant="destructive">NSFW</Badge>}

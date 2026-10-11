@@ -1,7 +1,8 @@
 # LocalFlow model catalog (SPEC Section 9.2).
 #
 # Every repo id and file pattern below was verified against the Hugging Face API on 2026-10-09
-# (see docs/DECISIONS.md, M2). Sizes are approximate download sizes in GB (decimal).
+# (see docs/DECISIONS.md, M2); the three `tier: draft` entries on 2026-10-11. Sizes are approximate
+# download sizes in GB (decimal).
 # Patterns use huggingface_hub `allow_patterns` semantics; the downloader additionally applies
 # the file policy (safetensors/gguf only unless allow_pickle_weights, never code files).
 #
@@ -127,6 +128,69 @@
       repo_id: black-forest-labs/FLUX.1-dev
       allow_patterns: [text_encoder/*, text_encoder_2/*, tokenizer/*, tokenizer_2/*, vae/*]
 
+- key: flux1-dev-q4-turbo
+  name: FLUX.1 [dev] · Q4_K_S + Turbo-Alpha (draft, 8 steps)
+  purpose: Fast text-to-image drafts (about 2.5× faster)
+  description: >-
+    The same FLUX.1 [dev] Q4_K_S model with the Turbo-Alpha 8-step distillation LoRA applied, so images
+    take 8 steps instead of 28 (about 17 s instead of 42 s on an RTX 5080) with very similar results.
+    Shares the transformer and the gated base components with FLUX.1 [dev] Q4_K_S, so it adds only 0.65 GB.
+    Used when a project is in Draft mode.
+  kind: checkpoint
+  capabilities: [t2i]
+  adapter_key: flux
+  base_model: flux1
+  tier: draft
+  source_ref: alimama-creative/FLUX.1-Turbo-Alpha
+  license: FLUX.1 [dev] Non-Commercial License
+  license_url: https://huggingface.co/black-forest-labs/FLUX.1-dev/blob/main/LICENSE.md
+  approx_size_gb: 17.5
+  default_params: {width: 1024, height: 1024, steps: 8, guidance_scale: 3.5}
+  vram_profiles: {resident_gb: 14.0}
+  parts:
+    - role: transformer
+      repo_id: city96/FLUX.1-dev-gguf
+      allow_patterns: [flux1-dev-Q4_K_S.gguf]
+    - role: base
+      repo_id: black-forest-labs/FLUX.1-dev
+      allow_patterns:
+        [model_index.json, scheduler/*, text_encoder/*, text_encoder_2/*, tokenizer/*, tokenizer_2/*, vae/*, transformer/config.json]
+    - role: lora
+      repo_id: alimama-creative/FLUX.1-Turbo-Alpha
+      allow_patterns: [diffusion_pytorch_model.safetensors]
+
+- key: flux1-kontext-dev-q4-turbo
+  name: FLUX.1 Kontext [dev] · Q4_K_M + Turbo-Alpha (draft, 8 steps)
+  purpose: Fast keyframe drafts (about 2.8× faster)
+  description: >-
+    FLUX.1 Kontext [dev] Q4_K_M with the Turbo-Alpha 8-step LoRA applied, so a keyframe takes 8 steps
+    instead of 28 (about 29 s instead of 80 s on an RTX 5080) with nearly identical results. Shares its
+    files with FLUX.1 Kontext [dev] and adds only 0.65 GB. Used when a project is in Draft mode.
+  kind: checkpoint
+  capabilities: [image_edit]
+  adapter_key: flux_kontext
+  base_model: flux1-kontext
+  tier: draft
+  source_ref: alimama-creative/FLUX.1-Turbo-Alpha
+  license: FLUX.1 [dev] Non-Commercial License
+  license_url: https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev/blob/main/LICENSE.md
+  approx_size_gb: 17.5
+  default_params: {steps: 8, guidance_scale: 2.5}
+  vram_profiles: {resident_gb: 14.5}
+  parts:
+    - role: transformer
+      repo_id: QuantStack/FLUX.1-Kontext-dev-GGUF
+      allow_patterns: [flux1-kontext-dev-Q4_K_M.gguf]
+    - role: kontext
+      repo_id: black-forest-labs/FLUX.1-Kontext-dev
+      allow_patterns: [model_index.json, scheduler/*, transformer/config.json]
+    - role: base
+      repo_id: black-forest-labs/FLUX.1-dev
+      allow_patterns: [text_encoder/*, text_encoder_2/*, tokenizer/*, tokenizer_2/*, vae/*]
+    - role: lora
+      repo_id: alimama-creative/FLUX.1-Turbo-Alpha
+      allow_patterns: [diffusion_pytorch_model.safetensors]
+
 - key: wan22-ti2v-5b
   name: Wan 2.2 TI2V-5B · GGUF Q8_0
   purpose: Text/image-to-video (default, 16 GB friendly)
@@ -158,6 +222,43 @@
     - role: transformer
       repo_id: QuantStack/Wan2.2-TI2V-5B-GGUF
       allow_patterns: [Wan2.2-TI2V-5B-Q8_0.gguf]
+    - role: base
+      repo_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
+      allow_patterns: [model_index.json, scheduler/*, text_encoder/*, tokenizer/*, vae/*, transformer/config.json]
+
+- key: wan22-ti2v-5b-turbo
+  name: Wan 2.2 TI2V-5B Turbo · GGUF Q8_0 (draft, 4 steps)
+  purpose: Fast video drafts (about 5.7× faster)
+  description: >-
+    A 4-step distilled Wan 2.2 5B (Self-Forcing/DMD), run without the guidance pass. A 3-second 720p clip
+    takes about 52 s instead of 295 s on an RTX 5080 and stays faithful to the start keyframe, with
+    slightly softer detail. The community GGUF repack is Apache 2.0; the original distillation repo states
+    no license of its own. Shares the base components with Wan 2.2 TI2V-5B, so it adds 5.4 GB. Used when a
+    project is in Draft mode.
+  kind: checkpoint
+  capabilities: [t2v, i2v, extend]
+  adapter_key: wan
+  base_model: wan2.2-5b
+  tier: draft
+  source_ref: hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF
+  license: Apache 2.0 (GGUF repack; the original distillation, quanhaol/Wan2.2-TI2V-5B-Turbo, states none)
+  license_url: https://huggingface.co/hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF
+  approx_size_gb: 19.7
+  default_params:
+    fps: 24
+    max_frames: 121
+    steps: 4
+    guidance_scale: 1.0
+    sizes:
+      quality: {"16:9": [1280, 704], "9:16": [704, 1280], "1:1": [960, 960]}
+      balanced: {"16:9": [1280, 704], "9:16": [704, 1280], "1:1": [960, 960]}
+      low: {"16:9": [832, 480], "9:16": [480, 832], "1:1": [640, 640]}
+  render: {max_clip_seconds: 5.0, fps: 24, supported_modes: [t2v, i2v], supports_native_audio: false}
+  vram_profiles: {resident_gb: 12.5}
+  parts:
+    - role: transformer
+      repo_id: hum-ma/Wan2.2-TI2V-5B-Turbo-GGUF
+      allow_patterns: [Wan2_2-TI2V-5B-Turbo-Q8_0.gguf]
     - role: base
       repo_id: Wan-AI/Wan2.2-TI2V-5B-Diffusers
       allow_patterns: [model_index.json, scheduler/*, text_encoder/*, tokenizer/*, vae/*, transformer/config.json]
