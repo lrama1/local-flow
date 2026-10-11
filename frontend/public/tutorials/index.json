@@ -2,6 +2,71 @@
   "version": 1,
   "tutorials": [
     {
+      "id": "full-film",
+      "title": "Make a film, start to finish",
+      "summary": "The whole pipeline in one project: a two-sentence idea becomes a story and shots, reference images, keyframes and video on your GPU, voices, sound effects and music, a timeline, and an MP4 export.",
+      "duration_s": 300.7,
+      "video": "/tutorials/full-film.mp4",
+      "poster": "/tutorials/full-film.jpg",
+      "captions": "/tutorials/full-film.vtt",
+      "chapters": [
+        {
+          "time_s": 0.9,
+          "title": "Introduction"
+        },
+        {
+          "time_s": 18.0,
+          "title": "Create a project"
+        },
+        {
+          "time_s": 25.6,
+          "title": "Idea and story"
+        },
+        {
+          "time_s": 69.2,
+          "title": "A reference for the hero"
+        },
+        {
+          "time_s": 105.4,
+          "title": "Generate every shot"
+        },
+        {
+          "time_s": 154.2,
+          "title": "Check a take"
+        },
+        {
+          "time_s": 183.9,
+          "title": "Dialogue and sound effects"
+        },
+        {
+          "time_s": 211.3,
+          "title": "Assemble the timeline"
+        },
+        {
+          "time_s": 229.0,
+          "title": "Music"
+        },
+        {
+          "time_s": 245.5,
+          "title": "Export"
+        },
+        {
+          "time_s": 256.3,
+          "title": "The finished film"
+        },
+        {
+          "time_s": 276.5,
+          "title": "The asset library"
+        },
+        {
+          "time_s": 289.9,
+          "title": "Wrap-up"
+        }
+      ],
+      "voice": "en-US-AndrewMultilingualNeural",
+      "generated_at": "2026-10-11T02:37:46+00:00"
+    },
+    {
       "id": "story-to-shots",
       "title": "From story idea to shot list",
       "summary": "Create a project, turn a few sentences into a refined story and a story bible with your LLM, and break it into scenes and shots on the Shots board.",

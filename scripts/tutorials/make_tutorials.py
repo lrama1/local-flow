@@ -31,6 +31,7 @@ import datetime as dt
 import hashlib
 import json
 import math
+import re
 import shutil
 import subprocess
 import sys
@@ -168,7 +169,7 @@ BADGE_SHOW_JS = """
     const s = Math.floor((Date.now() - t0) / 1000);
     const clock = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
     b.textContent = `\u23e9  ${label} \u00b7 ${clock} real time`;
-    setTimeout(tick, 250);
+    setTimeout(tick, 1000);  // one repaint a second: long waits stay cheap to capture
   };
   tick();
 }
@@ -204,6 +205,9 @@ class Session:
     marks: dict[str, float] = field(default_factory=dict)
     mouse: tuple[float, float] = (VIEW["width"] / 2, VIEW["height"] / 2)
     speech_end: float = 0.0
+    # Media whose own sound belongs in the tutorial (the finished film playing): (start, file, seconds).
+    # The screencast has no audio, so it's mixed in from the file.
+    sounds: list[tuple[float, Path, float]] = field(default_factory=list)
 
     def now(self) -> float:
         return time.time() - self.t0
@@ -243,6 +247,7 @@ class Session:
 
     # pointer and keyboard
     async def move(self, loc: Locator, fx: float = 0.5, fy: float = 0.5) -> None:
+        await loc.wait_for(state="visible")  # e.g. the shot panel remounts when its shot updates
         await loc.scroll_into_view_if_needed()
         box = await loc.bounding_box()
         assert box is not None, f"{loc} has no box"
@@ -288,12 +293,20 @@ class Session:
 
     # API helpers (same origin, per-launch token)
     async def api(self, method: str, path: str, body: Any = None) -> Any:
-        r = await self.page.request.fetch(
-            f"{self.base}{path}",
-            method=method,
-            headers={"X-LocalFlow-Token": self.token, "Content-Type": "application/json"},
-            data=json.dumps(body) if body is not None else None,
-        )
+        for attempt in range(6):
+            try:
+                r = await self.page.request.fetch(
+                    f"{self.base}{path}",
+                    method=method,
+                    headers={"X-LocalFlow-Token": self.token, "Content-Type": "application/json"},
+                    data=json.dumps(body) if body is not None else None,
+                )
+                break
+            except Exception as e:  # a dropped connection during an hour of polling isn't fatal
+                if method != "GET" or attempt == 5:
+                    raise
+                print(f"  retrying {path}: {e}", flush=True)
+                await asyncio.sleep(3)
         if not r.ok:
             raise RuntimeError(f"{method} {path} → {r.status}: {await r.text()}")
         return await r.json() if r.status != 204 else None
@@ -357,7 +370,7 @@ async def story_tutorial(s: Session) -> None:
 
     s.chapter("Create a project")
     await page.goto(f"{s.base}/projects")
-    await page.get_by_role("heading", name="Projects").wait_for()
+    await page.get_by_role("heading", name="Projects", exact=True).wait_for()
     await asyncio.sleep(0.4)
     await s.say("project", wait=False)
     await s.click(page.get_by_role("button", name="New project").first)
@@ -639,6 +652,349 @@ async def images_tutorial(s: Session) -> None:
     await asyncio.sleep(0.8)
 
 
+FILM_PROJECT = "The Last Rose"
+FILM_LINES = {
+    "intro": "In this tutorial, we'll make a complete short film with LocalFlow: from a two-sentence idea "
+    "to a finished video, with keyframes, motion, voices, sound effects, and music. Apart from the story "
+    "writing, everything runs on your own GPU.",
+    "project": "Start with a new project, and give it a name.",
+    "idea": "Write the idea, and set a target length. Fifteen seconds gives us a few shots: enough to see "
+    "the whole pipeline.",
+    "story": "Now refine the idea into a story, build the story bible, and break it down into shots. Your "
+    "language model takes a few seconds for each step.",
+    "story_done": "We have scenes and shots, each sized to fit one video clip, and an ingredient for every "
+    "character, place, and prop.",
+    "ingredients": "Next, give the main character a look. On the Ingredients tab, pick the FLUX dev model, "
+    "and click Generate.",
+    "ingredients_done": "The first candidate becomes the character's primary reference. The other "
+    "characters, places, and props get theirs the same way, so let's fast-forward through them.",
+    "generate_all": "Now the big step. On the Shots board, Generate all composes a keyframe for every shot "
+    "from its references, then animates each keyframe with Wan 2.2. With Use each new keyframe right away "
+    "ticked, it runs from start to finish on its own.",
+    "generate_wait": "This is the longest part: a few minutes of GPU time per shot. You can keep working, "
+    "or step away. Progress shows in the Jobs drawer.",
+    "takes": "Every shot now has a keyframe and a video take. Open a shot to see them.",
+    "review": "Check consistency asks a vision model to compare the take with the reference images. It "
+    "lists anything that drifted, like a different hair color, and suggests a corrected prompt.",
+    # True whichever way the check goes: the take may match, or drift in a detail or two.
+    "review_done": "Here's the verdict, with anything that drifted. Apply fix puts the corrected prompt "
+    "into the shot, ready to regenerate.",
+    "audio": "Below the video is the Audio section. Generate dialogue speaks the shot's lines in each "
+    "character's voice, timed to the clip. Generate sound effects watches the picture, and makes matching "
+    "sound with MMAudio.",
+    "audio_rest": "The other shots get their audio the same way.",
+    "timeline": "On the Timeline tab, Auto-assemble lays out every take in order, with its dialogue and "
+    "sound effects on their own tracks.",
+    "preview": "Press play to preview the cut. You can trim clips, reorder them, and change the transitions "
+    "right here.",
+    "music": "For a score, click plus on the Music track. MusicGen composes from the shots' music cues, and "
+    "the result is placed under the whole film.",
+    "export": "Finally, export. Pick a size, and LocalFlow renders an MP4 with every track mixed together.",
+    "film": "And here's our film.",
+    "library": "Everything you made is in the Assets tab. Filter by type, model, or scene, group things into "
+    "collections, or reuse any result's settings in the Playground.",
+    "outro": "That's the whole journey, from an idea to a finished film, on your own machine. The other "
+    "tutorials go deeper into each step.",
+}
+
+
+async def wait_idle(s: Session, pid: str, limit_s: float) -> None:
+    """Until the project has no queued or running jobs (they're queued before this is called)."""
+    deadline = time.time() + limit_s
+    while time.time() < deadline:
+        page = await s.api("GET", f"/api/jobs?status=queued&status=running&project_id={pid}&limit=1")
+        if page["total"] == 0:
+            return
+        await asyncio.sleep(2)
+    raise RuntimeError(f"jobs still running after {limit_s:.0f} s")
+
+
+def all_shots(board: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+    return [
+        (f"{si + 1}.{hi + 1}", sh)
+        for si, sc in enumerate(board["scenes"])
+        for hi, sh in enumerate(sc["shots"])
+    ]
+
+
+async def film_tutorial(s: Session) -> None:
+    page = s.page
+    for p in await s.api("GET", "/api/projects"):
+        if p["name"] == FILM_PROJECT:
+            await s.api("DELETE", f"/api/projects/{p['id']}")
+    # Against a FakeEngine server (a quick rehearsal: placeholder media, no model picks) or the real thing.
+    rehearsal = (await s.api("GET", "/api/system/status"))["worker"]["engine"] == "fake"
+    flux = next(
+        (m for m in await s.api("GET", "/api/models") if m.get("catalog_key") == "flux1-dev-q4"), None
+    )
+    if not rehearsal and (not flux or flux["status"] != "installed"):
+        raise SystemExit("Install FLUX.1 [dev] Q4_K_S (plus Kontext, Wan 2.2 5B, Kokoro, MMAudio, MusicGen).")
+
+    await s.card(
+        "Tutorial",
+        "Make a film, start to finish",
+        "Idea, story, references, keyframes, video, voices, sound, music, and export, in one pass.",
+    )
+    s.chapter("Introduction")
+    await s.say("intro")
+
+    # --- story ---------------------------------------------------------------------------------
+    s.chapter("Create a project")
+    await page.goto(f"{s.base}/projects")
+    await page.get_by_role("heading", name="Projects", exact=True).wait_for()
+    await s.say("project", wait=False)
+    await s.click(page.get_by_role("button", name="New project").first)
+    dialog = page.get_by_role("dialog", name="New project")
+    await s.type(dialog.get_by_role("textbox", name="Name"), FILM_PROJECT, delay=45)
+    await s.quiet(0.2)
+    await s.click(dialog.get_by_role("button", name="Create project"), after=1.0)
+    idea = page.get_by_role("textbox", name="Story idea")
+    await idea.wait_for()
+    pid = page.url.split("/projects/")[1].split("/")[0]
+
+    s.chapter("Idea and story")
+    await s.say("idea", wait=False)
+    await s.type(
+        idea,
+        "A rusty robot gardener tends the last rose in an abandoned greenhouse. One morning a little girl "
+        "climbs in through a broken pane, and the robot shows her the rose.",
+        delay=12,
+    )
+    await s.type(page.locator("#opt-length"), "15")
+    await s.type(page.locator("#opt-style"), "warm cinematic film, soft morning light")
+    await s.quiet()
+    await s.say("story", wait=False)
+    refine = page.get_by_role("button", name="Refine", exact=True)
+    await s.move(refine)
+    await s.quiet(0.2)
+    await s.click(refine)
+    refined = page.get_by_test_id("refined-editor")
+    await s.fast_forward(lambda: refined.wait_for(timeout=240_000), "Refining with your LLM")
+    build = page.get_by_role("button", name="Build bible")
+    await s.scroll_to(build)
+    await s.click(build)
+    bible = page.get_by_test_id("bible-view")
+    await s.fast_forward(lambda: bible.wait_for(timeout=300_000), "Building the story bible")
+    breakdown = page.get_by_role("button", name="Break down into shots")
+    await s.scroll_to(breakdown)
+    await s.click(breakdown)
+    summary = page.get_by_test_id("board-summary")
+    await s.fast_forward(lambda: summary.wait_for(timeout=300_000), "Breaking the story into shots")
+    await s.move(summary)
+    await s.say("story_done")
+
+    # --- references ------------------------------------------------------------------------------
+    board = await s.api("GET", f"/api/projects/{pid}/scenes")
+    ingredients = {i["id"]: i for i in await s.api("GET", f"/api/projects/{pid}/ingredients")}
+    shots = all_shots(board)
+    hero = next(
+        (
+            ingredients[i]
+            for _, sh in shots
+            for i in sh["ingredient_ids"]
+            if ingredients.get(i, {}).get("kind") == "character"
+        ),
+        None,
+    ) or next((i for i in ingredients.values() if i["kind"] == "character"), None)
+    if hero is None:
+        raise SystemExit("The breakdown has no character; record again.")
+
+    s.chapter("A reference for the hero")
+    await s.click(page.get_by_role("tab", name="Ingredients"), after=0.8)
+    card = page.get_by_test_id(f"ingredient-{hero['key']}")
+    await card.wait_for()
+    await s.say("ingredients", wait=False)
+    if not rehearsal:
+        await s.select(page.get_by_role("combobox", name="Model"), label="FLUX.1 [dev] · GGUF Q4_K_S")
+    await s.select(page.get_by_role("combobox", name="Images per run"), label="2 per run")
+    await s.scroll_to(card)
+    await s.click(card.get_by_role("button", name="Generate 2"))
+    await s.quiet()
+    candidates = card.get_by_role("button", name="Use as primary image")
+    await s.fast_forward(lambda: candidates.first.wait_for(timeout=900_000), "Generating on your GPU")
+    await page.get_by_alt_text(f"{hero['name']} reference").wait_for(timeout=60_000)
+    await s.move(page.get_by_alt_text(f"{hero['name']} reference"))
+    await s.say("ingredients_done")
+    others = [
+        i
+        for i in ingredients.values()
+        if i["kind"] != "style" and i["id"] != hero["id"] and not i["primary_asset_id"]
+    ]
+    model_id = None if rehearsal or not flux else flux["id"]
+    for ing in others:
+        await s.api(
+            "POST", f"/api/ingredients/{ing['id']}/generate", {"count": 1, "model_entry_id": model_id}
+        )
+    if others:
+        await s.fast_forward(lambda: wait_idle(s, pid, 3600), f"Generating {len(others)} more references")
+        await page.locator("main").evaluate("(m) => m.scrollTo({top: 0, behavior: 'smooth'})")
+        await asyncio.sleep(1.5)
+
+    # --- keyframes and video -------------------------------------------------------------------------
+    s.chapter("Generate every shot")
+    await s.click(page.get_by_role("tab", name="Shots board"), after=0.8)
+    await page.get_by_test_id("shot-1.1").wait_for()
+    await s.say("generate_all", wait=False)
+    await s.click(page.get_by_role("button", name="Generate all"), after=0.6)
+    gen = page.get_by_role("dialog", name="Generate all")
+    await s.click(gen.get_by_role("checkbox", name=re.compile("Use each new keyframe right away")))
+    await s.quiet(0.2)
+    await s.click(gen.get_by_role("button", name="Queue"), after=0.8)
+    await gen.get_by_test_id("generate-all-result").wait_for()
+    await asyncio.sleep(1.0)
+    await s.click(gen.get_by_role("button", name="Done"), after=0.5)
+    await s.click(page.get_by_role("button", name="Toggle jobs drawer"), after=0.6)
+    await s.say("generate_wait")
+    await s.click(page.get_by_role("button", name="Toggle jobs drawer"), after=0.4)
+
+    async def all_takes() -> None:
+        deadline = time.time() + 4 * 3600
+        while time.time() < deadline:
+            b = await s.api("GET", f"/api/projects/{pid}/scenes")
+            if all(sh["selected_video_asset_id"] for _, sh in all_shots(b)):
+                return
+            await asyncio.sleep(5)
+        raise RuntimeError("shots still without takes")
+
+    await s.fast_forward(all_takes, f"Keyframes and video for {len(shots)} shots")
+    await wait_idle(s, pid, 600)
+    await asyncio.sleep(1.5)  # the board updates over the WebSocket
+    await s.say("takes", wait=False)
+    for no, _ in shots[:3]:
+        await s.move(page.get_by_test_id(f"shot-{no}"))
+        await asyncio.sleep(0.6)
+    await s.quiet()
+
+    # --- review and audio on one shot ------------------------------------------------------------------
+    plans = {sh["id"]: await s.api("POST", f"/api/shots/{sh['id']}/audio-plan", {}) for _, sh in shots}
+    speaking = [(no, sh) for no, sh in shots if plans[sh["id"]]["lines"]]
+    shot_no, shot = (speaking or shots)[0]
+    s.chapter("Check a take")
+    await s.click(page.get_by_test_id(f"shot-{shot_no}"), after=0.8)
+    panel = page.get_by_role("dialog")
+    video = panel.get_by_test_id("video-section")
+    await s.scroll_to(video, "start")
+    await panel.get_by_test_id("selected-take").evaluate("(v) => { v.muted = true; v.play(); }")
+    review = panel.get_by_test_id("review-take")
+    if await review.count():
+        await s.say("review", wait=False)
+        await s.move(review.get_by_role("button", name="Check consistency"))
+        await s.quiet(0.2)
+        await s.click(review.get_by_role("button", name="Check consistency"))
+        verdict = review.get_by_role("region", name="Consistency check")
+        await s.fast_forward(lambda: verdict.wait_for(timeout=180_000), "Asking the vision model")
+        await s.scroll_to(verdict)
+        await s.say("review_done", wait=False)
+        await asyncio.sleep(1.5)
+        dismiss = verdict.get_by_role("button", name="Dismiss")
+        await s.quiet()
+        if await dismiss.count():
+            await s.click(dismiss)
+
+    s.chapter("Dialogue and sound effects")
+    audio = panel.get_by_test_id("audio-section")
+    await s.scroll_to(audio, "start")
+    await s.say("audio", wait=False)
+    dialogue = audio.get_by_role("button", name="Generate dialogue")
+    if await dialogue.is_enabled():
+        await s.click(dialogue, after=1.5)
+    await s.click(audio.get_by_role("button", name="Generate sound effects"), after=1.0)
+    await s.scroll_to(audio, "start")  # the panel remounts as the shot updates, scrolled to the top
+    await s.quiet()
+    await s.fast_forward(lambda: wait_idle(s, pid, 1800), "Voices and sound on your GPU")
+    await asyncio.sleep(1.0)
+    await page.keyboard.press("Escape")
+    await asyncio.sleep(0.5)
+    await s.say("audio_rest")
+    rest = [sh for _, sh in shots if sh["id"] != shot["id"]]
+    for sh in rest:
+        parts = ["sfx", *(["dialogue"] if plans[sh["id"]]["lines"] else [])]
+        await s.api("POST", f"/api/shots/{sh['id']}/generate-audio", {"parts": parts})
+    if rest:
+        await s.fast_forward(lambda: wait_idle(s, pid, 3600), f"Audio for {len(rest)} more shots")
+
+    # --- timeline, music, export -------------------------------------------------------------------------
+    s.chapter("Assemble the timeline")
+    await s.click(page.get_by_role("tab", name="Timeline"), after=1.0)
+    await s.say("timeline", wait=False)
+    await s.click(page.get_by_role("button", name="Auto-assemble").first, after=1.5)
+    await page.get_by_test_id("timeline-view").wait_for()
+    await s.quiet()
+    await s.say("preview", wait=False)
+    await s.click(page.get_by_role("button", name="Play", exact=True))
+    await asyncio.sleep(5)
+    await s.quiet()
+    await s.click(page.get_by_role("button", name="Pause", exact=True))
+
+    s.chapter("Music")
+    await s.say("music", wait=False)
+    await s.click(page.get_by_role("button", name="Add audio to Music"), after=0.8)
+    composer = page.get_by_test_id("music-generator")
+    await s.click(composer.get_by_role("button", name="Generate", exact=True))
+    await s.quiet()
+    await s.fast_forward(lambda: wait_idle(s, pid, 1800), "Composing with MusicGen")
+    await asyncio.sleep(1.0)
+    await page.keyboard.press("Escape")
+    await asyncio.sleep(1.0)
+    await s.move(page.get_by_test_id("track-a_music"))
+    await asyncio.sleep(1.0)
+
+    s.chapter("Export")
+    panel = page.get_by_test_id("export-panel")
+    await s.scroll_to(panel)
+    await s.say("export", wait=False)
+    await s.move(panel.get_by_role("combobox", name="Export size"))
+    await s.click(panel.get_by_role("button", name="Export MP4"))
+    await s.quiet()
+    history = panel.get_by_test_id("export-history").get_by_role("listitem")
+    await s.fast_forward(lambda: history.first.wait_for(timeout=1800_000), "Rendering the MP4")
+
+    s.chapter("The finished film")
+    exports = await s.api("GET", f"/api/projects/{pid}/assets?source=export&limit=1")
+    film = exports["items"][0]
+    local = WORK / "film.mp4"
+    r = await page.request.get(
+        f"{s.base}/api/files/{pid}/{film['id']}", headers={"X-LocalFlow-Token": s.token}
+    )
+    local.write_bytes(await r.body())
+    await s.say("film")
+    await s.click(panel.get_by_role("button", name="Play export"), after=0.3)
+    player = page.get_by_role("dialog").locator("video")
+    await player.wait_for()
+    await player.evaluate(
+        "(v) => new Promise((done) => { v.loop = false; v.currentTime = 0; v.muted = true;"
+        " v.addEventListener('playing', () => done(), {once: true}); v.play().catch(() => done()); })"
+    )
+    seconds = float(film["duration_s"] or ffprobe_duration(local))
+    await page.mouse.move(VIEW["width"] - 6, VIEW["height"] - 6)  # keep the cursor off the picture
+    s.mouse = (VIEW["width"] - 6, VIEW["height"] - 6)
+    s.sounds.append((s.now(), local, seconds))
+    s.marks["poster"] = s.now() + min(seconds * 0.6, 9.0)  # past the opening fade
+    await asyncio.sleep(seconds + 0.5)
+    await page.keyboard.press("Escape")
+    await asyncio.sleep(0.6)
+
+    s.chapter("The asset library")
+    await s.click(page.get_by_role("tab", name="Assets"), after=1.0)
+    await s.say("library", wait=False)
+    source = page.get_by_role("combobox", name="Source")
+    await s.move(source)
+    await source.select_option(value="export")
+    await asyncio.sleep(1.5)
+    await source.select_option(value="")
+    await s.move(page.get_by_role("navigation", name="Collections"))
+    await s.quiet()
+
+    s.chapter("Wrap-up")
+    await s.card(
+        "Tutorial",
+        "From idea to film, on your GPU",
+        "Story, references, keyframes, video, voices, sound, music, and export, all in one project.",
+    )
+    await s.say("outro")
+    await asyncio.sleep(0.8)
+
+
 SMOKE_LINES = {
     "a": "This is a quick check of the recording pipeline.",
     "b": "The wait you just saw was sped up, and the narration stayed in sync.",
@@ -666,6 +1022,14 @@ async def clear_candidates(s: Session, pid: str, query: dict[str, str]) -> None:
 
 
 TUTORIALS = [
+    Tutorial(
+        "full-film",
+        "Make a film, start to finish",
+        "The whole pipeline in one project: a two-sentence idea becomes a story and shots, reference images, "
+        "keyframes and video on your GPU, voices, sound effects and music, a timeline, and an MP4 export.",
+        FILM_LINES,
+        film_tutorial,
+    ),
     Tutorial(
         "story-to-shots",
         "From story idea to shot list",
@@ -799,9 +1163,19 @@ def assemble(
     for k, (t, clip) in enumerate(s.placed):
         inputs += ["-i", str(clip.path)]
         ms = int(remap(t - offset, segs) * 1000)
-        aparts.append(f"[{k + 1}:a]aresample=48000,adelay={ms}:all=1[a{k}]")
-    afilter = ";".join(aparts) + ";" + "".join(f"[a{k}]" for k in range(len(s.placed)))
-    afilter += f"amix=inputs={len(s.placed)}:normalize=0:dropout_transition=0,apad,atrim=0:{length:.3f}[aout]"
+        aparts.append(f"[{k + 1}:a]aresample=48000,aformat=channel_layouts=stereo,adelay={ms}:all=1[a{k}]")
+    labels = [f"[a{k}]" for k in range(len(s.placed))]
+    for j, (t, path, seconds) in enumerate(s.sounds):
+        n = len(s.placed) + 1 + j
+        inputs += ["-i", str(path)]
+        ms = int(remap(t - offset, segs) * 1000)
+        aparts.append(
+            f"[{n}:a]atrim=0:{seconds:.3f},aresample=48000,aformat=channel_layouts=stereo,"
+            f"afade=t=out:st={max(0.0, seconds - 0.6):.3f}:d=0.6,adelay={ms}:all=1[s{j}]"
+        )
+        labels.append(f"[s{j}]")
+    afilter = ";".join(aparts) + ";" + "".join(labels)
+    afilter += f"amix=inputs={len(labels)}:normalize=0:dropout_transition=0,apad,atrim=0:{length:.3f}[aout]"
 
     mp4 = OUT / f"{tut.id}.mp4"
     run_ffmpeg(
@@ -906,7 +1280,13 @@ async def record(tut: Tutorial, args: argparse.Namespace) -> dict[str, Any]:
         browser = await p.chromium.launch(
             channel=args.channel,
             headless=not args.headed,
-            args=[f"--force-device-scale-factor={SCALE}", f"--window-size={VIEW['width']},{VIEW['height']}"],
+            args=[
+                f"--force-device-scale-factor={SCALE}",
+                f"--window-size={VIEW['width']},{VIEW['height']}",
+                # Software rendering: Chrome's GPU compositing takes VRAM that the generation jobs plan to
+                # use, and Wan (swap mode) then ran about 4x slower while recording.
+                "--disable-gpu",
+            ],
         )
         ctx = await browser.new_context(no_viewport=True)
         await ctx.add_init_script(CURSOR_JS)

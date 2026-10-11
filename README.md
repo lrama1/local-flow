@@ -361,12 +361,15 @@ installed in your data dir and skips missing ones): `cd backend; uv run pytest -
 Database migrations live in `backend/alembic/versions/` and run automatically at startup.
 
 **Re-recording the tutorials** (after UI changes): start the built app (`npm start`), then run
-`uv run scripts/tutorials/make_tutorials.py` (or `--only story-to-shots` / `--only images-and-keyframes`).
+`uv run scripts/tutorials/make_tutorials.py` (or `--only full-film` / `--only story-to-shots` /
+`--only images-and-keyframes`).
 The script drives Chrome through the real app, narrates with edge-tts (Microsoft's online neural voices; the
 narration text is sent to that service), time-lapses LLM and GPU waits, and writes MP4 + captions + poster +
 `index.json` to `frontend/public/tutorials/`. The story tutorial recreates the "The Lighthouse Gull"
 project and calls your default LLM (a few cents). The images tutorial runs FLUX and FLUX Kontext jobs on that
-project, so record the story tutorial first. `--only smoke --out <dir>` checks the pipeline without the LLM
+project, so record the story tutorial first. The full-film tutorial makes "The Last Rose" from scratch and
+needs FLUX, FLUX Kontext, Wan 2.2 5B, Kokoro, MMAudio and MusicGen installed; it takes about an hour of GPU
+time. `--only smoke --out <dir>` checks the pipeline without the LLM
 or GPU.
 
 ```

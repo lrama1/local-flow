@@ -750,3 +750,17 @@ test. Test data made along the way was removed.
 3. **Narration voice:** edge-tts `en-US-AndrewMultilingualNeural`. edge-tts calls Microsoft's online
    Edge TTS service, so only the fixed narration script leaves the machine. Sentence boundaries from the
    service become WebVTT cues, and long sentences are split into timed chunks.
+4. **The full-film tutorial** ("Make a film, start to finish") runs the whole pipeline for real: a
+   15-second project, references, keyframes, Wan video, voices, SFX, music, timeline and export. It takes
+   about an hour of GPU time.
+   - Only the hero's reference and one dialogue and SFX clip are generated on screen. The rest go through
+     the API under a time-lapse, so the video stays about 5 minutes long.
+   - **Chrome runs with `--disable-gpu`.** Headless Chrome's GPU compositing of a constantly repainting
+     screencast competed with Wan for VRAM and made video generation about 4× slower.
+   - The screencast has no audio, so the finished export's soundtrack is mixed in under the narration
+     while the film plays.
+   - uvicorn's 5 s keep-alive timeout matches the 5 s poll interval and sometimes resets a connection, so
+     the recorder retries GET requests.
+   - Rehearse the flow against the FakeEngine and fake-LLM server (`E2E_PORT=8799 node e2e/serve.mjs`,
+     then `--base-url http://127.0.0.1:8799`). It runs in about 5 minutes and skips the waits for real
+     jobs.

@@ -1,0 +1,209 @@
+WEBVTT
+
+1
+00:00:00.964 --> 00:00:06.276
+In this tutorial, we'll make a complete short film with LocalFlow: from a
+
+2
+00:00:06.276 --> 00:00:11.806
+two-sentence idea to a finished video, with keyframes, motion, voices, sound
+
+3
+00:00:11.806 --> 00:00:13.189
+effects, and music.
+
+4
+00:00:13.189 --> 00:00:17.426
+Apart from the story writing, everything runs on your own GPU.
+
+5
+00:00:18.082 --> 00:00:20.557
+Start with a new project, and give it a name.
+
+6
+00:00:25.607 --> 00:00:28.519
+Write the idea, and set a target length.
+
+7
+00:00:28.519 --> 00:00:33.557
+Fifteen seconds gives us a few shots: enough to see the whole pipeline.
+
+8
+00:00:34.126 --> 00:00:39.865
+Now refine the idea into a story, build the story bible, and break it down into
+
+9
+00:00:39.865 --> 00:00:40.301
+shots.
+
+10
+00:00:40.301 --> 00:00:44.051
+Your language model takes a few seconds for each step.
+
+11
+00:01:00.729 --> 00:01:06.360
+We have scenes and shots, each sized to fit one video clip, and an ingredient for
+
+12
+00:01:06.360 --> 00:01:08.654
+every character, place, and prop.
+
+13
+00:01:11.238 --> 00:01:13.613
+Next, give the main character a look.
+
+14
+00:01:13.613 --> 00:01:18.226
+On the Ingredients tab, pick the FLUX dev model, and click Generate.
+
+15
+00:01:26.369 --> 00:01:30.032
+The first candidate becomes the character's primary reference.
+
+16
+00:01:30.032 --> 00:01:34.530
+The other characters, places, and props get theirs the same way, so let's
+
+17
+00:01:34.530 --> 00:01:36.132
+fast-forward through them.
+
+18
+00:01:46.697 --> 00:01:47.934
+Now the big step.
+
+19
+00:01:47.934 --> 00:01:53.517
+On the Shots board, Generate all composes a keyframe for every shot from its
+
+20
+00:01:53.517 --> 00:01:57.409
+references, then animates each keyframe with Wan 2.2.
+
+21
+00:01:57.409 --> 00:02:02.663
+With Use each new keyframe right away ticked, it runs from start to finish on its
+
+22
+00:02:02.663 --> 00:02:02.922
+own.
+
+23
+00:02:10.149 --> 00:02:14.524
+This is the longest part: a few minutes of GPU time per shot.
+
+24
+00:02:14.524 --> 00:02:16.799
+You can keep working, or step away.
+
+25
+00:02:16.799 --> 00:02:18.962
+Progress shows in the Jobs drawer.
+
+26
+00:02:28.751 --> 00:02:32.189
+Every shot now has a keyframe and a video take.
+
+27
+00:02:32.189 --> 00:02:33.589
+Open a shot to see them.
+
+28
+00:02:37.491 --> 00:02:43.241
+Check consistency asks a vision model to compare the take with the reference images.
+
+29
+00:02:43.241 --> 00:02:47.837
+It lists anything that drifted, like a different hair color, and suggests a
+
+30
+00:02:47.837 --> 00:02:48.879
+corrected prompt.
+
+31
+00:02:55.028 --> 00:02:57.716
+Here's the verdict, with anything that drifted.
+
+32
+00:02:57.716 --> 00:03:02.478
+Apply fix puts the corrected prompt into the shot, ready to regenerate.
+
+33
+00:03:05.344 --> 00:03:08.006
+Below the video is the Audio section.
+
+34
+00:03:08.006 --> 00:03:13.575
+Generate dialogue speaks the shot's lines in each character's voice, timed to the
+
+35
+00:03:13.575 --> 00:03:13.919
+clip.
+
+36
+00:03:13.919 --> 00:03:19.344
+Generate sound effects watches the picture, and makes matching sound with MMAudio.
+
+37
+00:03:24.774 --> 00:03:27.449
+The other shots get their audio the same way.
+
+38
+00:03:33.312 --> 00:03:38.351
+On the Timeline tab, Auto-assemble lays out every take in order, with its dialogue
+
+39
+00:03:38.351 --> 00:03:40.687
+and sound effects on their own tracks.
+
+40
+00:03:41.265 --> 00:03:42.952
+Press play to preview the cut.
+
+41
+00:03:42.952 --> 00:03:47.415
+You can trim clips, reorder them, and change the transitions right here.
+
+42
+00:03:49.084 --> 00:03:51.796
+For a score, click plus on the Music track.
+
+43
+00:03:51.796 --> 00:03:57.126
+MusicGen composes from the shots' music cues, and the result is placed under the
+
+44
+00:03:57.126 --> 00:03:57.859
+whole film.
+
+45
+00:04:06.767 --> 00:04:08.492
+Finally, export.
+
+46
+00:04:08.492 --> 00:04:14.317
+Pick a size, and LocalFlow renders an MP4 with every track mixed together.
+
+47
+00:04:16.935 --> 00:04:18.135
+And here's our film.
+
+48
+00:04:39.012 --> 00:04:41.549
+Everything you made is in the Assets tab.
+
+49
+00:04:41.549 --> 00:04:46.850
+Filter by type, model, or scene, group things into collections, or reuse any
+
+50
+00:04:46.850 --> 00:04:49.362
+result's settings in the Playground.
+
+51
+00:04:50.861 --> 00:04:56.061
+That's the whole journey, from an idea to a finished film, on your own machine.
+
+52
+00:04:56.061 --> 00:04:59.411
+The other tutorials go deeper into each step.
